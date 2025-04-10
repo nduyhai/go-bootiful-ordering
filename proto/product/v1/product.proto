@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package product.v1;
+
+option go_package = "github.com/ndhai/go-bootiful-ordering/gen/product/v1;productv1";
+
+// ProductService provides operations for managing products
+service ProductService {
+  // CreateProduct creates a new product
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse) {}
+  // GetProduct retrieves a product by ID
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse) {}
+  // ListProducts retrieves a list of products
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse) {}
+  // UpdateProduct updates a product
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse) {}
+  // DeleteProduct deletes a product
+  rpc DeleteProduct(DeleteProductRequest) returns (DeleteProductResponse) {}
+}
+
+// Product represents a product in the system
+message Product {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int64 price = 4;
+  int32 stock = 5;
+  string category = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+// Request and Response messages
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  int64 price = 3;
+  int32 stock = 4;
+  string category = 5;
+}
+
+message CreateProductResponse {
+  Product product = 1;
+}
+
+message GetProductRequest {
+  string product_id = 1;
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+
+message ListProductsRequest {
+  string category = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  string next_page_token = 2;
+}
+
+message UpdateProductRequest {
+  string product_id = 1;
+  string name = 2;
+  string description = 3;
+  int64 price = 4;
+  int32 stock = 5;
+  string category = 6;
+}
+
+message UpdateProductResponse {
+  Product product = 1;
+}
+
+message DeleteProductRequest {
+  string product_id = 1;
+}
+
+message DeleteProductResponse {
+  bool success = 1;
+} 
