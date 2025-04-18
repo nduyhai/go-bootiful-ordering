@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 	"net"
 	"net/http"
+	"time"
 
 	orderv1 "go-bootiful-ordering/gen/order/v1"
 	orderConfig "go-bootiful-ordering/internal/order/config"
@@ -52,6 +53,35 @@ func NewGRPCServer(orderServer *orderHandler.GRPCOrderServer) *grpc.Server {
 	server := grpc.NewServer()
 	orderv1.RegisterOrderServiceServer(server, orderServer)
 	return server
+}
+
+// StartHTTPServer starts the HTTP server with graceful shutdown
+func StartHTTPServer(lc fx.Lifecycle, server *http.Server, log *zap.Logger) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			log.Info("Starting HTTP server on " + server.Addr)
+			go func() {
+				if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					log.Error("Failed to start HTTP server", zap.Error(err))
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			log.Info("Stopping HTTP server")
+			// Use context with timeout for graceful shutdown
+			shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+
+			if err := server.Shutdown(shutdownCtx); err != nil {
+				log.Error("Failed to gracefully shutdown HTTP server", zap.Error(err))
+				return err
+			}
+
+			log.Info("HTTP server stopped gracefully")
+			return nil
+		},
+	})
 }
 
 // StartGRPCServer starts the gRPC server
@@ -118,8 +148,9 @@ func main() {
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
-		fx.Invoke(func(*http.Server, *gorm.DB) {}), // Add DB to invoke to ensure it's initialized
-		fx.Invoke(StartGRPCServer),                 // Start the gRPC server
+		fx.Invoke(func(*gorm.DB) {}), // Add DB to invoke to ensure it's initialized
+		fx.Invoke(StartHTTPServer),   // Start the HTTP server with graceful shutdown
+		fx.Invoke(StartGRPCServer),   // Start the gRPC server
 	).Run()
 }
 
