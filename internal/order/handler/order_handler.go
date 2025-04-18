@@ -2,9 +2,8 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	"go-bootiful-ord
 	"go-bootiful-ordering/internal/order/domain"
-	"github.com/gin-gonic/gin"
+	"go-bootiful-ordering/internal/order/service"
 	"go.uber.org/zap"
 	"net/http"
 	"strconv"
@@ -42,8 +41,8 @@ func (h *CreateOrderHandler) Register(rg *gin.RouterGroup) {
 
 // CreateOrder handles HTTP requests to create orders
 func (h *CreateOrderHandler) CreateOrder(c *gin.Context) {
+	var request struct {
 		CustomerID string             `json:"customer_id"`
-		CustomerID string            `json:"customer_id"`
 		Items      []domain.OrderItem `json:"items"`
 	}
 

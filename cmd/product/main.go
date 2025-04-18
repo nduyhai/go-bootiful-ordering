@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"gorm.io/gorm"
+	"net"
 	"net/http"
 
+	productv1 "go-bootiful-ordering/gen/product/v1"
 	productConfig "go-bootiful-ordering/internal/product/config"
 	productHandler "go-bootiful-ordering/internal/product/handler"
 	productRepository "go-bootiful-ordering/internal/product/repository"
@@ -43,6 +47,39 @@ func NewHTTPServer(engine *gin.Engine) *http.Server {
 	}
 }
 
+// NewGRPCServer creates a new gRPC server
+func NewGRPCServer(productServer *productHandler.GRPCProductServer) *grpc.Server {
+	server := grpc.NewServer()
+	productv1.RegisterProductServiceServer(server, productServer)
+	return server
+}
+
+// StartGRPCServer starts the gRPC server
+func StartGRPCServer(lc fx.Lifecycle, server *grpc.Server, log *zap.Logger) {
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			listener, err := net.Listen("tcp", ":9091") // Different port from HTTP server
+			if err != nil {
+				log.Error("Failed to listen for gRPC", zap.Error(err))
+				return err
+			}
+
+			log.Info("Starting gRPC server on :9091")
+			go func() {
+				if err := server.Serve(listener); err != nil {
+					log.Error("Failed to start gRPC server", zap.Error(err))
+				}
+			}()
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			log.Info("Stopping gRPC server")
+			server.GracefulStop()
+			return nil
+		},
+	})
+}
+
 func main() {
 	fx.New(
 		fx.Provide(NewHTTPServer),
@@ -56,6 +93,10 @@ func main() {
 		fx.Provide(AsRoute(productHandler.NewListProductsHandler)),
 		fx.Provide(AsRoute(productHandler.NewUpdateProductHandler)),
 		fx.Provide(AsRoute(productHandler.NewDeleteProductHandler)),
+
+		// gRPC server
+		fx.Provide(productHandler.NewGRPCProductServer),
+		fx.Provide(NewGRPCServer),
 
 		// Logger
 		fx.Provide(zap.NewExample),
@@ -78,6 +119,7 @@ func main() {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
 		fx.Invoke(func(*http.Server, *gorm.DB) {}), // Add DB to invoke to ensure it's initialized
+		fx.Invoke(StartGRPCServer), // Start the gRPC server
 	).Run()
 }
 
