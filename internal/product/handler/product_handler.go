@@ -11,14 +11,14 @@ import (
 // CreateProductHandler handles requests to create products
 type CreateProductHandler struct {
 	log     *zap.Logger
-	factory *service.ProductFactory
+	service service.ProductService
 }
 
 // NewCreateProductHandler creates a new CreateProductHandler
-func NewCreateProductHandler(log *zap.Logger, factory *service.ProductFactory) *CreateProductHandler {
+func NewCreateProductHandler(log *zap.Logger, service service.ProductService) *CreateProductHandler {
 	return &CreateProductHandler{
 		log:     log,
-		factory: factory,
+		service: service,
 	}
 }
 
@@ -67,7 +67,7 @@ func (h *CreateProductHandler) CreateProduct(c *gin.Context) {
 	}
 
 	// Create product
-	product, err := h.factory.CreateProduct(c.Request.Context(), req.Name, req.Description, req.Price, req.Stock, req.Category)
+	product, err := h.service.CreateProduct(c.Request.Context(), req.Name, req.Description, req.Price, req.Stock, req.Category)
 	if err != nil {
 		h.log.Error("Failed to create product", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create product"})
@@ -80,14 +80,14 @@ func (h *CreateProductHandler) CreateProduct(c *gin.Context) {
 // GetProductHandler handles requests to get products
 type GetProductHandler struct {
 	log     *zap.Logger
-	factory *service.ProductFactory
+	service service.ProductService
 }
 
 // NewGetProductHandler creates a new GetProductHandler
-func NewGetProductHandler(log *zap.Logger, factory *service.ProductFactory) *GetProductHandler {
+func NewGetProductHandler(log *zap.Logger, service service.ProductService) *GetProductHandler {
 	return &GetProductHandler{
 		log:     log,
-		factory: factory,
+		service: service,
 	}
 }
 
@@ -109,7 +109,7 @@ func (h *GetProductHandler) GetProduct(c *gin.Context) {
 		return
 	}
 
-	product, err := h.factory.GetProduct(c.Request.Context(), productID)
+	product, err := h.service.GetProduct(c.Request.Context(), productID)
 	if err != nil {
 		h.log.Error("Failed to get product", zap.Error(err), zap.String("productID", productID))
 		c.JSON(http.StatusNotFound, gin.H{"error": "Product not found"})
@@ -122,14 +122,14 @@ func (h *GetProductHandler) GetProduct(c *gin.Context) {
 // ListProductsHandler handles requests to list products
 type ListProductsHandler struct {
 	log     *zap.Logger
-	factory *service.ProductFactory
+	service service.ProductService
 }
 
 // NewListProductsHandler creates a new ListProductsHandler
-func NewListProductsHandler(log *zap.Logger, factory *service.ProductFactory) *ListProductsHandler {
+func NewListProductsHandler(log *zap.Logger, service service.ProductService) *ListProductsHandler {
 	return &ListProductsHandler{
 		log:     log,
-		factory: factory,
+		service: service,
 	}
 }
 
@@ -157,7 +157,7 @@ func (h *ListProductsHandler) ListProducts(c *gin.Context) {
 
 	pageToken := c.Query("page_token")
 
-	products, nextPageToken, err := h.factory.ListProducts(c.Request.Context(), category, pageSize, pageToken)
+	products, nextPageToken, err := h.service.ListProducts(c.Request.Context(), category, pageSize, pageToken)
 	if err != nil {
 		h.log.Error("Failed to list products", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list products"})
@@ -178,14 +178,14 @@ func (h *ListProductsHandler) ListProducts(c *gin.Context) {
 // UpdateProductHandler handles requests to update products
 type UpdateProductHandler struct {
 	log     *zap.Logger
-	factory *service.ProductFactory
+	service service.ProductService
 }
 
 // NewUpdateProductHandler creates a new UpdateProductHandler
-func NewUpdateProductHandler(log *zap.Logger, factory *service.ProductFactory) *UpdateProductHandler {
+func NewUpdateProductHandler(log *zap.Logger, service service.ProductService) *UpdateProductHandler {
 	return &UpdateProductHandler{
 		log:     log,
-		factory: factory,
+		service: service,
 	}
 }
 
@@ -241,7 +241,7 @@ func (h *UpdateProductHandler) UpdateProduct(c *gin.Context) {
 	}
 
 	// Update product
-	product, err := h.factory.UpdateProduct(c.Request.Context(), productID, req.Name, req.Description, req.Price, req.Stock, req.Category)
+	product, err := h.service.UpdateProduct(c.Request.Context(), productID, req.Name, req.Description, req.Price, req.Stock, req.Category)
 	if err != nil {
 		h.log.Error("Failed to update product", zap.Error(err), zap.String("productID", productID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update product"})
@@ -254,14 +254,14 @@ func (h *UpdateProductHandler) UpdateProduct(c *gin.Context) {
 // DeleteProductHandler handles requests to delete products
 type DeleteProductHandler struct {
 	log     *zap.Logger
-	factory *service.ProductFactory
+	service service.ProductService
 }
 
 // NewDeleteProductHandler creates a new DeleteProductHandler
-func NewDeleteProductHandler(log *zap.Logger, factory *service.ProductFactory) *DeleteProductHandler {
+func NewDeleteProductHandler(log *zap.Logger, service service.ProductService) *DeleteProductHandler {
 	return &DeleteProductHandler{
 		log:     log,
-		factory: factory,
+		service: service,
 	}
 }
 
@@ -283,7 +283,7 @@ func (h *DeleteProductHandler) DeleteProduct(c *gin.Context) {
 		return
 	}
 
-	err := h.factory.DeleteProduct(c.Request.Context(), productID)
+	err := h.service.DeleteProduct(c.Request.Context(), productID)
 	if err != nil {
 		h.log.Error("Failed to delete product", zap.Error(err), zap.String("productID", productID))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete product"})

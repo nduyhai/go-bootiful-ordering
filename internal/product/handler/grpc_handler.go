@@ -15,14 +15,14 @@ import (
 type GRPCProductServer struct {
 	productv1.UnimplementedProductServiceServer
 	log     *zap.Logger
-	factory *service.ProductFactory
+	service service.ProductService
 }
 
 // NewGRPCProductServer creates a new GRPCProductServer
-func NewGRPCProductServer(log *zap.Logger, factory *service.ProductFactory) *GRPCProductServer {
+func NewGRPCProductServer(log *zap.Logger, service service.ProductService) *GRPCProductServer {
 	return &GRPCProductServer{
 		log:     log,
-		factory: factory,
+		service: service,
 	}
 }
 
@@ -45,8 +45,8 @@ func (s *GRPCProductServer) CreateProduct(ctx context.Context, req *productv1.Cr
 		return nil, status.Error(codes.InvalidArgument, "stock cannot be negative")
 	}
 
-	// Create product using the factory
-	product, err := s.factory.CreateProduct(ctx, req.Name, req.Description, req.Price, req.Stock, req.Category)
+	// Create product using the service
+	product, err := s.service.CreateProduct(ctx, req.Name, req.Description, req.Price, req.Stock, req.Category)
 	if err != nil {
 		s.log.Error("Failed to create product", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create product")
@@ -66,8 +66,8 @@ func (s *GRPCProductServer) GetProduct(ctx context.Context, req *productv1.GetPr
 		return nil, status.Error(codes.InvalidArgument, "product_id is required")
 	}
 
-	// Get product using the factory
-	product, err := s.factory.GetProduct(ctx, req.ProductId)
+	// Get product using the service
+	product, err := s.service.GetProduct(ctx, req.ProductId)
 	if err != nil {
 		s.log.Error("Failed to get product", zap.Error(err), zap.String("productID", req.ProductId))
 		return nil, status.Error(codes.NotFound, "product not found")
@@ -86,8 +86,8 @@ func (s *GRPCProductServer) ListProducts(ctx context.Context, req *productv1.Lis
 		zap.Int32("pageSize", req.PageSize),
 		zap.String("pageToken", req.PageToken))
 
-	// List products using the factory
-	products, nextPageToken, err := s.factory.ListProducts(ctx, req.Category, req.PageSize, req.PageToken)
+	// List products using the service
+	products, nextPageToken, err := s.service.ListProducts(ctx, req.Category, req.PageSize, req.PageToken)
 	if err != nil {
 		s.log.Error("Failed to list products", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to list products")
@@ -128,8 +128,8 @@ func (s *GRPCProductServer) UpdateProduct(ctx context.Context, req *productv1.Up
 		return nil, status.Error(codes.InvalidArgument, "stock cannot be negative")
 	}
 
-	// Update product using the factory
-	product, err := s.factory.UpdateProduct(ctx, req.ProductId, req.Name, req.Description, req.Price, req.Stock, req.Category)
+	// Update product using the service
+	product, err := s.service.UpdateProduct(ctx, req.ProductId, req.Name, req.Description, req.Price, req.Stock, req.Category)
 	if err != nil {
 		s.log.Error("Failed to update product", zap.Error(err), zap.String("productID", req.ProductId))
 		return nil, status.Error(codes.Internal, "failed to update product")
@@ -149,8 +149,8 @@ func (s *GRPCProductServer) DeleteProduct(ctx context.Context, req *productv1.De
 		return nil, status.Error(codes.InvalidArgument, "product_id is required")
 	}
 
-	// Delete product using the factory
-	err := s.factory.DeleteProduct(ctx, req.ProductId)
+	// Delete product using the service
+	err := s.service.DeleteProduct(ctx, req.ProductId)
 	if err != nil {
 		s.log.Error("Failed to delete product", zap.Error(err), zap.String("productID", req.ProductId))
 		return nil, status.Error(codes.Internal, "failed to delete product")

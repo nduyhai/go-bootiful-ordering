@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -88,14 +89,42 @@ func main() {
 			fx.ParamTags(`group:"routes"`))),
 
 		// Product handlers
-		fx.Provide(AsRoute(productHandler.NewCreateProductHandler)),
-		fx.Provide(AsRoute(productHandler.NewGetProductHandler)),
-		fx.Provide(AsRoute(productHandler.NewListProductsHandler)),
-		fx.Provide(AsRoute(productHandler.NewUpdateProductHandler)),
-		fx.Provide(AsRoute(productHandler.NewDeleteProductHandler)),
+		fx.Provide(fx.Annotate(
+			productHandler.NewCreateProductHandler,
+			fx.As(new(Route)),
+			fx.ResultTags(`group:"routes"`),
+			fx.ParamTags(``, `name:"dbProductService"`),
+		)),
+		fx.Provide(fx.Annotate(
+			productHandler.NewGetProductHandler,
+			fx.As(new(Route)),
+			fx.ResultTags(`group:"routes"`),
+			fx.ParamTags(``, `name:"dbProductService"`),
+		)),
+		fx.Provide(fx.Annotate(
+			productHandler.NewListProductsHandler,
+			fx.As(new(Route)),
+			fx.ResultTags(`group:"routes"`),
+			fx.ParamTags(``, `name:"dbProductService"`),
+		)),
+		fx.Provide(fx.Annotate(
+			productHandler.NewUpdateProductHandler,
+			fx.As(new(Route)),
+			fx.ResultTags(`group:"routes"`),
+			fx.ParamTags(``, `name:"dbProductService"`),
+		)),
+		fx.Provide(fx.Annotate(
+			productHandler.NewDeleteProductHandler,
+			fx.As(new(Route)),
+			fx.ResultTags(`group:"routes"`),
+			fx.ParamTags(``, `name:"dbProductService"`),
+		)),
 
 		// gRPC server
-		fx.Provide(productHandler.NewGRPCProductServer),
+		fx.Provide(fx.Annotate(
+			productHandler.NewGRPCProductServer,
+			fx.ParamTags(``, `name:"dbProductService"`))),
+
 		fx.Provide(NewGRPCServer),
 
 		// Logger
@@ -105,45 +134,33 @@ func main() {
 		fx.Provide(productConfig.NewDefaultDatabaseConfig),
 		fx.Provide(productConfig.NewGormDB),
 
+		// Redis configuration and connection
+		fx.Provide(productConfig.NewDefaultRedisConfig),
+		fx.Provide(productConfig.NewRedisClient),
+
 		// Product repository
-		fx.Provide(AsProductRepository(productRepository.NewGormProductRepository)),
+		fx.Provide(productRepository.NewGormProductRepository),
+		fx.Provide(fx.Annotate(
+			func(redis *redis.Client, gormRepo *productRepository.GormProductRepository) productRepository.ProductRepository {
+				return productRepository.NewRedisProductRepository(redis, gormRepo)
+			},
+			fx.As(new(productRepository.ProductRepository)),
+		)),
 
 		// Product services
-		fx.Provide(AsProductService(productService.NewDefaultProductService)),
-		fx.Provide(AsProductService(productService.NewDBProductService)),
 		fx.Provide(fx.Annotate(
-			productService.NewProductFactory,
-			fx.ParamTags(`group:"products"`))),
+			productService.NewDBProductService,
+			fx.As(new(productService.ProductService)),
+			fx.ResultTags(`name:"dbProductService"`),
+		)),
 
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
+		}),
 		fx.Invoke(func(*http.Server, *gorm.DB) {}), // Add DB to invoke to ensure it's initialized
-		fx.Invoke(StartGRPCServer), // Start the gRPC server
+		fx.Invoke(StartGRPCServer),                 // Start the gRPC server
 	).Run()
-}
-
-// AsRoute annotates a handler constructor to be provided as a Route
-func AsRoute(f any) any {
-	return fx.Annotate(
-		f,
-		fx.As(new(Route)),
-		fx.ResultTags(`group:"routes"`),
-	)
-}
-
-func AsProductService(f any) any {
-	return fx.Annotate(
-		f,
-		fx.As(new(productService.ProductService)),
-		fx.ResultTags(`group:"products"`),
-	)
-}
-
-func AsProductRepository(f any) any {
-	return fx.Annotate(
-		f,
-		fx.As(new(productRepository.ProductRepository)),
-		fx.ResultTags(`group:"productRepositories"`),
-	)
 }
