@@ -25,4 +25,11 @@ go.work.sum
 # env file
 .env
 
+# Generated files
 /gen/
+
+# Binary directory
+/bin/
+
+# Atlas binary
+atlas
