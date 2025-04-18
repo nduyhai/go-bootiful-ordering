@@ -18,6 +18,7 @@ import (
 	orderHandler "go-bootiful-ordering/internal/order/handler"
 	orderRepository "go-bootiful-ordering/internal/order/repository"
 	orderService "go-bootiful-ordering/internal/order/service"
+	"go-bootiful-ordering/internal/pkg/metrics"
 	"go-bootiful-ordering/internal/pkg/tracing"
 )
 
@@ -34,6 +35,12 @@ func NewGinEngine(routes []Route, tracer opentracing.Tracer) *gin.Engine {
 
 	// Add OpenTracing middleware
 	r.Use(tracing.GinMiddleware(tracer))
+
+	// Add Prometheus middleware
+	r.Use(metrics.GinMiddleware())
+
+	// Register metrics endpoint
+	metrics.RegisterMetricsEndpoint(r)
 
 	// Create a router group for API routes
 	apiGroup := r.Group("")
@@ -55,9 +62,13 @@ func NewHTTPServer(engine *gin.Engine) *http.Server {
 
 // NewGRPCServer creates a new gRPC server
 func NewGRPCServer(orderServer *orderHandler.GRPCOrderServer, tracer opentracing.Tracer) *grpc.Server {
-	server := grpc.NewServer(
-		grpc.UnaryInterceptor(tracing.UnaryServerInterceptor(tracer)),
+	// Chain the tracing and metrics interceptors
+	chainedInterceptor := grpc.ChainUnaryInterceptor(
+		tracing.UnaryServerInterceptor(tracer),
+		metrics.UnaryServerInterceptor(),
 	)
+
+	server := grpc.NewServer(chainedInterceptor)
 	orderv1.RegisterOrderServiceServer(server, orderServer)
 	return server
 }
@@ -136,10 +147,17 @@ func InitTracer(lc fx.Lifecycle, log *zap.Logger) opentracing.Tracer {
 	return tracer
 }
 
+// InitMetrics initializes the Prometheus metrics
+func InitMetrics(log *zap.Logger) {
+	log.Info("Initializing metrics")
+	metrics.InitMetrics("order-service")
+}
+
 func main() {
 	fx.New(
 		fx.Provide(NewHTTPServer),
 		fx.Provide(InitTracer), // Provide the tracer
+		fx.Provide(InitMetrics), // Provide metrics initialization
 		fx.Provide(fx.Annotate(
 			NewGinEngine,
 			fx.ParamTags(`group:"routes"`, ``))),
