@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/opentracing/opentracing-go"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
@@ -17,6 +18,7 @@ import (
 	orderHandler "go-bootiful-ordering/internal/order/handler"
 	orderRepository "go-bootiful-ordering/internal/order/repository"
 	orderService "go-bootiful-ordering/internal/order/service"
+	"go-bootiful-ordering/internal/pkg/tracing"
 )
 
 // Route interface defines a HTTP route handler
@@ -27,8 +29,11 @@ type Route interface {
 }
 
 // NewGinEngine creates a new gin.Engine with the given routes
-func NewGinEngine(routes []Route) *gin.Engine {
+func NewGinEngine(routes []Route, tracer opentracing.Tracer) *gin.Engine {
 	r := gin.Default()
+
+	// Add OpenTracing middleware
+	r.Use(tracing.GinMiddleware(tracer))
 
 	// Create a router group for API routes
 	apiGroup := r.Group("")
@@ -49,8 +54,10 @@ func NewHTTPServer(engine *gin.Engine) *http.Server {
 }
 
 // NewGRPCServer creates a new gRPC server
-func NewGRPCServer(orderServer *orderHandler.GRPCOrderServer) *grpc.Server {
-	server := grpc.NewServer()
+func NewGRPCServer(orderServer *orderHandler.GRPCOrderServer, tracer opentracing.Tracer) *grpc.Server {
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(tracing.UnaryServerInterceptor(tracer)),
+	)
 	orderv1.RegisterOrderServiceServer(server, orderServer)
 	return server
 }
@@ -110,12 +117,32 @@ func StartGRPCServer(lc fx.Lifecycle, server *grpc.Server, log *zap.Logger) {
 	})
 }
 
+// InitTracer initializes the OpenTracing tracer
+func InitTracer(lc fx.Lifecycle, log *zap.Logger) opentracing.Tracer {
+	// Initialize tracer with default Jaeger configuration
+	tracer, closer, err := tracing.InitTracer("order-service", "jaeger:6831")
+	if err != nil {
+		log.Fatal("Failed to initialize tracer", zap.Error(err))
+	}
+
+	// Register lifecycle hooks for the tracer
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			log.Info("Closing tracer")
+			return closer.Close()
+		},
+	})
+
+	return tracer
+}
+
 func main() {
 	fx.New(
 		fx.Provide(NewHTTPServer),
+		fx.Provide(InitTracer), // Provide the tracer
 		fx.Provide(fx.Annotate(
 			NewGinEngine,
-			fx.ParamTags(`group:"routes"`))),
+			fx.ParamTags(`group:"routes"`, ``))),
 
 		// Order handlers
 		fx.Provide(AsRoute(orderHandler.NewCreateOrderHandler)),
@@ -125,7 +152,9 @@ func main() {
 
 		// gRPC server
 		fx.Provide(orderHandler.NewGRPCOrderServer),
-		fx.Provide(NewGRPCServer),
+		fx.Provide(fx.Annotate(
+			NewGRPCServer,
+			fx.ParamTags(``, ``))),
 
 		// Logger
 		fx.Provide(zap.NewExample),

@@ -5,7 +5,9 @@ go 1.24
 require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
+	github.com/opentracing/opentracing-go v1.2.0
 	github.com/redis/go-redis/v9 v9.7.3
+	github.com/uber/jaeger-client-go v2.30.0+incompatible
 	go.uber.org/fx v1.23.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/grpc v1.71.1
@@ -15,6 +17,7 @@ require (
 )
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/bytedance/sonic v1.13.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -38,9 +41,12 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
+	github.com/uber/jaeger-lib v2.4.1+incompatible // indirect
 	github.com/ugorji/go/codec v1.2.12 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/dig v1.18.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.16.0 // indirect
