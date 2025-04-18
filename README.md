@@ -42,31 +42,35 @@ The project follows clean architecture principles:
 
 ## Database Migrations
 
-The project uses [Atlas](https://atlasgo.io/) for database migrations. Atlas is a modern database schema migration tool that supports versioned migrations, validation, and more.
+The project uses [golang-migrate](https://github.com/golang-migrate/migrate) for database migrations. This is a powerful migration tool that supports versioned migrations, rollbacks, and more.
 
-### Running Migrations
+### Automatic Migrations
 
-To run migrations, use the following commands:
+Migrations are automatically applied when the application starts. This ensures that the database schema is always up-to-date with the application code.
+
+### Manual Migrations
+
+To run migrations manually, use the following commands:
 
 ```bash
-# Install Atlas CLI (if not already installed)
-curl -sSf https://atlasgo.sh | sh
-
 # Run migrations for the order service
-make migrate-order
+go run cmd/migrate/main.go -service=order
 
 # Run migrations for the product service
-make migrate-product
+go run cmd/migrate/main.go -service=product
+
+# Dry run (don't apply migrations)
+go run cmd/migrate/main.go -service=order -dry-run
 ```
 
 ### Migration Files
 
 Migration files are stored in the `migrations` directory, with subdirectories for each service:
 
-- `migrations/order/`: Contains migration files for the order service
-- `migrations/product/`: Contains migration files for the product service
+- `migrations/order/sql/`: Contains migration files for the order service
+- `migrations/product/sql/`: Contains migration files for the product service
 
-Each migration file is written in HCL (HashiCorp Configuration Language) and defines the database schema for the service.
+Each migration follows the naming convention `VERSION_NAME.up.sql` for migrations and `VERSION_NAME.down.sql` for rollbacks. The files contain SQL statements that define the database schema for the service.
 
 ## Configuration
 

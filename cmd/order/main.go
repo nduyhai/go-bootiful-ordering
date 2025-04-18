@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/opentracing/opentracing-go"
 	"go.uber.org/fx"
@@ -21,6 +22,7 @@ import (
 	"go-bootiful-ordering/internal/pkg/config"
 	"go-bootiful-ordering/internal/pkg/health"
 	"go-bootiful-ordering/internal/pkg/metrics"
+	"go-bootiful-ordering/internal/pkg/migrate"
 	"go-bootiful-ordering/internal/pkg/tracing"
 )
 
@@ -189,6 +191,29 @@ func NewDatabaseConfig(cfg *config.Config) *orderConfig.DatabaseConfig {
 	}
 }
 
+// RunMigrations runs database migrations
+func RunMigrations(log *zap.Logger, dbConfig *orderConfig.DatabaseConfig) error {
+	log.Info("Running database migrations for order service")
+
+	// Build DSN
+	dsn := fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.DBName, dbConfig.SSLMode,
+	)
+
+	// Create migration config
+	migrationCfg := migrate.NewDefaultConfig("order", dsn)
+
+	// Run migrations
+	if err := migrate.Run(migrationCfg); err != nil {
+		log.Error("Failed to run migrations", zap.Error(err))
+		return err
+	}
+
+	log.Info("Database migrations completed successfully")
+	return nil
+}
+
 func main() {
 	fx.New(
 		fx.Provide(fx.Annotate(
@@ -226,12 +251,13 @@ func main() {
 		// Order service
 		fx.Provide(fx.Annotate(orderService.NewDBOrderService, fx.As(new(orderService.OrderService)))),
 
-		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
-			return &fxevent.ZapLogger{Logger: log}
-		}),
-		fx.Invoke(func(*gorm.DB) {}), // Add DB to invoke to ensure it's initialized
-		fx.Invoke(StartHTTPServer),   // Start the HTTP server with a graceful shutdown
-		fx.Invoke(StartGRPCServer),   // Start the gRPC server
+ 	fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+ 		return &fxevent.ZapLogger{Logger: log}
+ 	}),
+ 	fx.Invoke(func(*gorm.DB) {}), // Add DB to invoke to ensure it's initialized
+ 	fx.Invoke(RunMigrations),     // Run database migrations
+ 	fx.Invoke(StartHTTPServer),   // Start the HTTP server with a graceful shutdown
+ 	fx.Invoke(StartGRPCServer),   // Start the gRPC server
 	).Run()
 }
 
