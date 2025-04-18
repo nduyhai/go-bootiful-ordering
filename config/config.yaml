@@ -1,0 +1,12 @@
+# Common configuration for all services
+jaeger:
+  host: localhost
+  port: "6831"
+  logSpans: true
+
+# Default server configuration (can be overridden in service-specific configs)
+server:
+  http:
+    port: "8080"
+  grpc:
+    port: "9090"

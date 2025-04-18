@@ -83,5 +83,48 @@ services:
       timeout: 5s
       retries: 5
 
+  order:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-bootiful-ordering-order
+    command: ["./bin/order"]
+    ports:
+      - "8080:8080"
+      - "9090:9090"
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - postgres
+      - jaeger
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  product:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go-bootiful-ordering-product
+    command: ["./bin/product"]
+    ports:
+      - "8081:8081"
+      - "9091:9091"
+    volumes:
+      - ./config:/app/config
+    depends_on:
+      - postgres
+      - redis
+      - jaeger
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   grafana-storage:

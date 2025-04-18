@@ -1,0 +1,25 @@
+# Order service configuration
+service:
+  name: order-service
+
+# Database configuration
+db:
+  host: localhost
+  port: "5432"
+  user: myuser
+  password: secret
+  name: orders
+  sslMode: disable
+
+# Jaeger configuration
+jaeger:
+  host: localhost
+  port: "6831"
+  logSpans: true
+
+# Server configuration
+server:
+  http:
+    port: "8082"
+  grpc:
+    port: "9092"

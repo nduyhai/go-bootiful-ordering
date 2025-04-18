@@ -18,6 +18,8 @@ import (
 	orderHandler "go-bootiful-ordering/internal/order/handler"
 	orderRepository "go-bootiful-ordering/internal/order/repository"
 	orderService "go-bootiful-ordering/internal/order/service"
+	"go-bootiful-ordering/internal/pkg/config"
+	"go-bootiful-ordering/internal/pkg/health"
 	"go-bootiful-ordering/internal/pkg/metrics"
 	"go-bootiful-ordering/internal/pkg/tracing"
 )
@@ -42,6 +44,9 @@ func NewGinEngine(routes []Route, tracer opentracing.Tracer) *gin.Engine {
 	// Register metrics endpoint
 	metrics.RegisterMetricsEndpoint(r)
 
+	// Register health check endpoint
+	health.RegisterHealthEndpoint(r)
+
 	// Create a router group for API routes
 	apiGroup := r.Group("")
 
@@ -53,9 +58,9 @@ func NewGinEngine(routes []Route, tracer opentracing.Tracer) *gin.Engine {
 	return r
 }
 
-func NewHTTPServer(engine *gin.Engine) *http.Server {
+func NewHTTPServer(engine *gin.Engine, cfg *config.Config) *http.Server {
 	return &http.Server{
-		Addr:    ":8080", // You can make this configurable
+		Addr:    ":" + cfg.Server.HTTP.Port,
 		Handler: engine,
 	}
 }
@@ -70,6 +75,10 @@ func NewGRPCServer(orderServer *orderHandler.GRPCOrderServer, tracer opentracing
 
 	server := grpc.NewServer(chainedInterceptor)
 	orderv1.RegisterOrderServiceServer(server, orderServer)
+
+	// Register health check service
+	health.RegisterHealthServer(server)
+
 	return server
 }
 
@@ -103,16 +112,17 @@ func StartHTTPServer(lc fx.Lifecycle, server *http.Server, log *zap.Logger) {
 }
 
 // StartGRPCServer starts the gRPC server
-func StartGRPCServer(lc fx.Lifecycle, server *grpc.Server, log *zap.Logger) {
+func StartGRPCServer(lc fx.Lifecycle, server *grpc.Server, log *zap.Logger, cfg *config.Config) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			listener, err := net.Listen("tcp", ":9090") // Different port from HTTP server and product gRPC server
+			grpcAddr := ":" + cfg.Server.GRPC.Port
+			listener, err := net.Listen("tcp", grpcAddr)
 			if err != nil {
 				log.Error("Failed to listen for gRPC", zap.Error(err))
 				return err
 			}
 
-			log.Info("Starting gRPC server on :9090")
+			log.Info("Starting gRPC server on " + grpcAddr)
 			go func() {
 				if err := server.Serve(listener); err != nil {
 					log.Error("Failed to start gRPC server", zap.Error(err))
@@ -128,10 +138,20 @@ func StartGRPCServer(lc fx.Lifecycle, server *grpc.Server, log *zap.Logger) {
 	})
 }
 
+// LoadConfig loads the application configuration
+func LoadConfig(log *zap.Logger) (*config.Config, error) {
+	cfg, err := config.LoadServiceConfig("order")
+	if err != nil {
+		log.Error("Failed to load configuration", zap.Error(err))
+		return nil, err
+	}
+	return cfg, nil
+}
+
 // InitTracer initializes the OpenTracing tracer
-func InitTracer(lc fx.Lifecycle, log *zap.Logger) opentracing.Tracer {
-	// Initialize tracer with default Jaeger configuration
-	tracer, closer, err := tracing.InitTracer("order-service", "jaeger:6831")
+func InitTracer(lc fx.Lifecycle, log *zap.Logger, cfg *config.Config) opentracing.Tracer {
+	// Initialize tracer with configuration from YAML
+	tracer, closer, err := tracing.InitTracer(cfg.Service.Name, cfg.Jaeger.HostPort())
 	if err != nil {
 		log.Fatal("Failed to initialize tracer", zap.Error(err))
 	}
@@ -147,15 +167,34 @@ func InitTracer(lc fx.Lifecycle, log *zap.Logger) opentracing.Tracer {
 	return tracer
 }
 
+// MetricsService represents the metrics service
+type MetricsService struct{}
+
 // InitMetrics initializes the Prometheus metrics
-func InitMetrics(log *zap.Logger) {
+func InitMetrics(log *zap.Logger, cfg *config.Config) *MetricsService {
 	log.Info("Initializing metrics")
-	metrics.InitMetrics("order-service")
+	metrics.InitMetrics(cfg.Service.Name)
+	return &MetricsService{}
+}
+
+// NewDatabaseConfig creates a database configuration from the YAML configuration
+func NewDatabaseConfig(cfg *config.Config) *orderConfig.DatabaseConfig {
+	return &orderConfig.DatabaseConfig{
+		Host:     cfg.DB.Host,
+		Port:     cfg.DB.Port,
+		User:     cfg.DB.User,
+		Password: cfg.DB.Password,
+		DBName:   cfg.DB.Name,
+		SSLMode:  cfg.DB.SSLMode,
+	}
 }
 
 func main() {
 	fx.New(
-		fx.Provide(NewHTTPServer),
+		fx.Provide(fx.Annotate(
+			NewHTTPServer,
+			fx.ParamTags(``, ``))),
+		fx.Provide(LoadConfig), // Provide the configuration
 		fx.Provide(InitTracer), // Provide the tracer
 		fx.Provide(InitMetrics), // Provide metrics initialization
 		fx.Provide(fx.Annotate(
@@ -172,13 +211,13 @@ func main() {
 		fx.Provide(orderHandler.NewGRPCOrderServer),
 		fx.Provide(fx.Annotate(
 			NewGRPCServer,
-			fx.ParamTags(``, ``))),
+			fx.ParamTags(``, ``, ``, ``))),
 
 		// Logger
 		fx.Provide(zap.NewExample),
 
 		// Database configuration and connection
-		fx.Provide(orderConfig.NewDefaultDatabaseConfig),
+		fx.Provide(NewDatabaseConfig),
 		fx.Provide(orderConfig.NewGormDB),
 
 		// Order repository
