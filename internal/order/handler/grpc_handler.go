@@ -15,14 +15,14 @@ import (
 type GRPCOrderServer struct {
 	orderv1.UnimplementedOrderServiceServer
 	log     *zap.Logger
-	factory *service.OrderFactory
+	service service.OrderService
 }
 
 // NewGRPCOrderServer creates a new GRPCOrderServer
-func NewGRPCOrderServer(log *zap.Logger, factory *service.OrderFactory) *GRPCOrderServer {
+func NewGRPCOrderServer(log *zap.Logger, service service.OrderService) *GRPCOrderServer {
 	return &GRPCOrderServer{
 		log:     log,
-		factory: factory,
+		service: service,
 	}
 }
 
@@ -48,8 +48,8 @@ func (s *GRPCOrderServer) CreateOrder(ctx context.Context, req *orderv1.CreateOr
 		}
 	}
 
-	// Create order using the factory
-	order, err := s.factory.CreateOrder(ctx, req.CustomerId, items)
+	// Create order using the service
+	order, err := s.service.CreateOrder(ctx, req.CustomerId, items)
 	if err != nil {
 		s.log.Error("Failed to create order", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create order")
@@ -69,8 +69,8 @@ func (s *GRPCOrderServer) GetOrder(ctx context.Context, req *orderv1.GetOrderReq
 		return nil, status.Error(codes.InvalidArgument, "order_id is required")
 	}
 
-	// Get order using the factory
-	order, err := s.factory.GetOrder(ctx, req.OrderId)
+	// Get order using the service
+	order, err := s.service.GetOrder(ctx, req.OrderId)
 	if err != nil {
 		s.log.Error("Failed to get order", zap.Error(err), zap.String("orderID", req.OrderId))
 		return nil, status.Error(codes.NotFound, "order not found")
@@ -93,8 +93,8 @@ func (s *GRPCOrderServer) ListOrders(ctx context.Context, req *orderv1.ListOrder
 		return nil, status.Error(codes.InvalidArgument, "customer_id is required")
 	}
 
-	// List orders using the factory
-	orders, nextPageToken, err := s.factory.ListOrders(ctx, req.CustomerId, req.PageSize, req.PageToken)
+	// List orders using the service
+	orders, nextPageToken, err := s.service.ListOrders(ctx, req.CustomerId, req.PageSize, req.PageToken)
 	if err != nil {
 		s.log.Error("Failed to list orders", zap.Error(err), zap.String("customerID", req.CustomerId))
 		return nil, status.Error(codes.Internal, "failed to list orders")
@@ -139,8 +139,8 @@ func (s *GRPCOrderServer) UpdateOrderStatus(ctx context.Context, req *orderv1.Up
 		return nil, status.Error(codes.InvalidArgument, "invalid order status")
 	}
 
-	// Update order status using the factory
-	order, err := s.factory.UpdateOrderStatus(ctx, req.OrderId, orderStatus)
+	// Update order status using the service
+	order, err := s.service.UpdateOrderStatus(ctx, req.OrderId, orderStatus)
 	if err != nil {
 		s.log.Error("Failed to update order status", zap.Error(err), zap.String("orderID", req.OrderId))
 		return nil, status.Error(codes.Internal, "failed to update order status")

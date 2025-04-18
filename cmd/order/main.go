@@ -135,21 +135,16 @@ func main() {
 		fx.Provide(orderConfig.NewGormDB),
 
 		// Order repository
-		fx.Provide(AsOrderRepository(orderRepository.NewGormOrderRepository)),
+		fx.Provide(fx.Annotate(orderRepository.NewGormOrderRepository, fx.As(new(orderRepository.OrderRepository)))),
 
-		// Order services
-		fx.Provide(AsOrderService(orderService.NewDefaultOrderService)),
-		fx.Provide(AsOrderService(orderService.NewRemoteOrderService)),
-		fx.Provide(AsOrderService(orderService.NewDBOrderService)), // Add DB-backed service
-		fx.Provide(fx.Annotate(
-			orderService.NewOrderFactory,
-			fx.ParamTags(`group:"orders"`))),
+		// Order service
+		fx.Provide(fx.Annotate(orderService.NewDBOrderService, fx.As(new(orderService.OrderService)))),
 
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
 		fx.Invoke(func(*gorm.DB) {}), // Add DB to invoke to ensure it's initialized
-		fx.Invoke(StartHTTPServer),   // Start the HTTP server with graceful shutdown
+		fx.Invoke(StartHTTPServer),   // Start the HTTP server with a graceful shutdown
 		fx.Invoke(StartGRPCServer),   // Start the gRPC server
 	).Run()
 }
@@ -160,21 +155,5 @@ func AsRoute(f any) any {
 		f,
 		fx.As(new(Route)),
 		fx.ResultTags(`group:"routes"`),
-	)
-}
-
-func AsOrderService(f any) any {
-	return fx.Annotate(
-		f,
-		fx.As(new(orderService.OrderService)),
-		fx.ResultTags(`group:"orderServices"`),
-	)
-}
-
-func AsOrderRepository(f any) any {
-	return fx.Annotate(
-		f,
-		fx.As(new(orderRepository.OrderRepository)),
-		fx.ResultTags(`group:"orderRepositories"`),
 	)
 }
