@@ -38,11 +38,12 @@ fmt:
 ## Lint code
 lint:
 	@echo ">> Linting..."
-	@if ! [ -x "$$(command -v golint)" ]; then \
-		echo ">> Installing golint..."; \
-		$(GO) install golang.org/x/lint/golint@latest; \
+	@if ! [ -x "$$(command -v golangci-lint)" ]; then \
+		echo ">> Installing golangci-lint..."; \
+		$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest; \
+		export PATH="$$PATH:$$($(GO) env GOPATH)/bin"; \
 	fi
-	@golint ./...
+	@GOPATH=$$($(GO) env GOPATH) PATH="$$PATH:$$($(GO) env GOPATH)/bin" golangci-lint run
 
 ## Generate code (e.g., Protobufs)
 generate:

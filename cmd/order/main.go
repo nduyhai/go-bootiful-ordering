@@ -219,8 +219,8 @@ func main() {
 		fx.Provide(fx.Annotate(
 			NewHTTPServer,
 			fx.ParamTags(``, ``))),
-		fx.Provide(LoadConfig), // Provide the configuration
-		fx.Provide(InitTracer), // Provide the tracer
+		fx.Provide(LoadConfig),  // Provide the configuration
+		fx.Provide(InitTracer),  // Provide the tracer
 		fx.Provide(InitMetrics), // Provide metrics initialization
 		fx.Provide(fx.Annotate(
 			NewGinEngine,
@@ -251,13 +251,13 @@ func main() {
 		// Order service
 		fx.Provide(fx.Annotate(orderService.NewDBOrderService, fx.As(new(orderService.OrderService)))),
 
- 	fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
- 		return &fxevent.ZapLogger{Logger: log}
- 	}),
- 	fx.Invoke(func(*gorm.DB) {}), // Add DB to invoke to ensure it's initialized
- 	fx.Invoke(RunMigrations),     // Run database migrations
- 	fx.Invoke(StartHTTPServer),   // Start the HTTP server with a graceful shutdown
- 	fx.Invoke(StartGRPCServer),   // Start the gRPC server
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
+		}),
+		fx.Invoke(func(*gorm.DB) {}), // Add DB to invoke to ensure it's initialized
+		fx.Invoke(RunMigrations),     // Run database migrations
+		fx.Invoke(StartHTTPServer),   // Start the HTTP server with a graceful shutdown
+		fx.Invoke(StartGRPCServer),   // Start the gRPC server
 	).Run()
 }
 

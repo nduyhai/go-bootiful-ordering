@@ -230,7 +230,7 @@ func main() {
 		fx.Provide(fx.Annotate(
 			NewHTTPServer,
 			fx.ParamTags(``, ``))),
-		fx.Provide(LoadConfig), // Provide the configuration
+		fx.Provide(LoadConfig),  // Provide the configuration
 		fx.Provide(InitTracer),  // Provide the tracer
 		fx.Provide(InitMetrics), // Provide metrics initialization
 		fx.Provide(fx.Annotate(
