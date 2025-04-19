@@ -70,7 +70,7 @@ Migration files are stored in the `migrations` directory, with subdirectories fo
 - `migrations/order/sql/`: Contains migration files for the order service
 - `migrations/product/sql/`: Contains migration files for the product service
 
-Each migration follows the naming convention `VERSION_NAME.up.sql` for migrations and `VERSION_NAME.down.sql` for rollbacks. The files contain SQL statements that define the database schema for the service.
+Each migration follows the naming convention `VERSION_NAME.up.sql`. The files contain SQL statements that define the database schema for the service.
 
 ## Configuration
 
