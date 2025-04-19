@@ -28,7 +28,7 @@ func NewGRPCProductServer(log *zap.Logger, service service.ProductService) *GRPC
 
 // CreateProduct implements the CreateProduct RPC method
 func (s *GRPCProductServer) CreateProduct(ctx context.Context, req *productv1.CreateProductRequest) (*productv1.CreateProductResponse, error) {
-	s.log.Info("GRPCProductServer_CreateProduct", 
+	s.log.Info("GRPCProductServer_CreateProduct",
 		zap.String("name", req.Name),
 		zap.String("category", req.Category))
 
@@ -81,7 +81,7 @@ func (s *GRPCProductServer) GetProduct(ctx context.Context, req *productv1.GetPr
 
 // ListProducts implements the ListProducts RPC method
 func (s *GRPCProductServer) ListProducts(ctx context.Context, req *productv1.ListProductsRequest) (*productv1.ListProductsResponse, error) {
-	s.log.Info("GRPCProductServer_ListProducts", 
+	s.log.Info("GRPCProductServer_ListProducts",
 		zap.String("category", req.Category),
 		zap.Int32("pageSize", req.PageSize),
 		zap.String("pageToken", req.PageToken))
@@ -107,7 +107,7 @@ func (s *GRPCProductServer) ListProducts(ctx context.Context, req *productv1.Lis
 
 // UpdateProduct implements the UpdateProduct RPC method
 func (s *GRPCProductServer) UpdateProduct(ctx context.Context, req *productv1.UpdateProductRequest) (*productv1.UpdateProductResponse, error) {
-	s.log.Info("GRPCProductServer_UpdateProduct", 
+	s.log.Info("GRPCProductServer_UpdateProduct",
 		zap.String("productID", req.ProductId),
 		zap.String("name", req.Name),
 		zap.String("category", req.Category))

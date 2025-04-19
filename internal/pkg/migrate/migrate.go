@@ -13,21 +13,21 @@ import (
 
 // Config holds the configuration for migrations
 type Config struct {
-	Enabled  bool   // Whether migrations are enabled
-	Service  string // Service name (order or product)
-	DSN      string // Database connection string
-	Dir      string // Migration directory (optional)
-	Timeout  time.Duration // Timeout for migrations
+	Enabled bool          // Whether migrations are enabled
+	Service string        // Service name (order or product)
+	DSN     string        // Database connection string
+	Dir     string        // Migration directory (optional)
+	Timeout time.Duration // Timeout for migrations
 }
 
 // NewDefaultConfig creates a new Config with default values
 func NewDefaultConfig(service string, dsn string) *Config {
 	return &Config{
-		Enabled:  true,
-		Service:  service,
-		DSN:      dsn,
-		Dir:      "",
-		Timeout:  30 * time.Second,
+		Enabled: true,
+		Service: service,
+		DSN:     dsn,
+		Dir:     "",
+		Timeout: 30 * time.Second,
 	}
 }
 
@@ -62,11 +62,11 @@ func Run(cfg *Config) error {
 // RunWithTimeout runs migrations with a timeout
 func RunWithTimeout(dir, dsn string, timeout time.Duration) error {
 	done := make(chan error, 1)
-	
+
 	go func() {
 		done <- runMigrations(dir, dsn)
 	}()
-	
+
 	select {
 	case err := <-done:
 		return err

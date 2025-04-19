@@ -84,7 +84,7 @@ func (s *GRPCOrderServer) GetOrder(ctx context.Context, req *orderv1.GetOrderReq
 
 // ListOrders implements the ListOrders RPC method
 func (s *GRPCOrderServer) ListOrders(ctx context.Context, req *orderv1.ListOrdersRequest) (*orderv1.ListOrdersResponse, error) {
-	s.log.Info("GRPCOrderServer_ListOrders", 
+	s.log.Info("GRPCOrderServer_ListOrders",
 		zap.String("customerID", req.CustomerId),
 		zap.Int32("pageSize", req.PageSize),
 		zap.String("pageToken", req.PageToken))
@@ -114,7 +114,7 @@ func (s *GRPCOrderServer) ListOrders(ctx context.Context, req *orderv1.ListOrder
 
 // UpdateOrderStatus implements the UpdateOrderStatus RPC method
 func (s *GRPCOrderServer) UpdateOrderStatus(ctx context.Context, req *orderv1.UpdateOrderStatusRequest) (*orderv1.UpdateOrderStatusResponse, error) {
-	s.log.Info("GRPCOrderServer_UpdateOrderStatus", 
+	s.log.Info("GRPCOrderServer_UpdateOrderStatus",
 		zap.String("orderID", req.OrderId),
 		zap.Int32("status", int32(req.Status)))
 
