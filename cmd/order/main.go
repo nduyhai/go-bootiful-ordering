@@ -153,7 +153,16 @@ func LoadConfig(log *zap.Logger) (*config.Config, error) {
 // InitTracer initializes the OpenTracing tracer
 func InitTracer(lc fx.Lifecycle, log *zap.Logger, cfg *config.Config) opentracing.Tracer {
 	// Initialize tracer with configuration from YAML
-	tracer, closer, err := tracing.InitTracer(cfg.Service.Name, cfg.Jaeger.HostPort())
+	// Try to use Tempo config first, fall back to Jaeger config for backward compatibility
+	hostPort := cfg.Tempo.HostPort()
+	if hostPort == ":" { // If Tempo config is not set
+		hostPort = cfg.Jaeger.HostPort() // Use Jaeger config (which is actually TempoConfig now)
+		log.Info("Using Jaeger configuration for tracing (pointing to Tempo)")
+	} else {
+		log.Info("Using Tempo configuration for tracing")
+	}
+
+	tracer, closer, err := tracing.InitTracer(cfg.Service.Name, hostPort)
 	if err != nil {
 		log.Fatal("Failed to initialize tracer", zap.Error(err))
 	}

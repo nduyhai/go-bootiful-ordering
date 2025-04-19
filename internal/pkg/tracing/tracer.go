@@ -12,8 +12,9 @@ import (
 	"github.com/uber/jaeger-client-go/zipkin"
 )
 
-// InitTracer initializes a new Jaeger tracer
-func InitTracer(serviceName string, jaegerHostPort string) (opentracing.Tracer, io.Closer, error) {
+// InitTracer initializes a new OpenTracing tracer with Tempo as the backend
+// We're still using the Jaeger client as Tempo supports the Jaeger protocol
+func InitTracer(serviceName string, tempoHostPort string) (opentracing.Tracer, io.Closer, error) {
 	cfg := jaegercfg.Configuration{
 		ServiceName: serviceName,
 		Sampler: &jaegercfg.SamplerConfig{
@@ -23,7 +24,7 @@ func InitTracer(serviceName string, jaegerHostPort string) (opentracing.Tracer, 
 		Reporter: &jaegercfg.ReporterConfig{
 			LogSpans:            true,
 			BufferFlushInterval: 1 * time.Second,
-			LocalAgentHostPort:  jaegerHostPort,
+			LocalAgentHostPort:  tempoHostPort, // Now points to Tempo instead of Jaeger
 		},
 	}
 
@@ -39,7 +40,7 @@ func InitTracer(serviceName string, jaegerHostPort string) (opentracing.Tracer, 
 	)
 
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot initialize Jaeger Tracer: %w", err)
+		return nil, nil, fmt.Errorf("cannot initialize OpenTracing Tracer: %w", err)
 	}
 
 	opentracing.SetGlobalTracer(tracer)

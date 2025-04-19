@@ -11,7 +11,8 @@ import (
 // Config represents the application configuration
 type Config struct {
 	Service ServiceConfig `yaml:"service"`
-	Jaeger  JaegerConfig  `yaml:"jaeger"`
+	Jaeger  TempoConfig   `yaml:"jaeger"` // Still using "jaeger" in YAML for backward compatibility
+	Tempo   TempoConfig   `yaml:"tempo"`  // New field for explicit Tempo config
 	Redis   RedisConfig   `yaml:"redis"`
 	DB      DBConfig      `yaml:"db"`
 	Server  ServerConfig  `yaml:"server"`
@@ -22,15 +23,16 @@ type ServiceConfig struct {
 	Name string `yaml:"name"`
 }
 
-// JaegerConfig holds Jaeger tracing configuration
-type JaegerConfig struct {
+// TempoConfig holds tracing configuration for Tempo
+// This replaces JaegerConfig but maintains the same structure
+type TempoConfig struct {
 	Host     string `yaml:"host"`
 	Port     string `yaml:"port"`
 	LogSpans bool   `yaml:"logSpans"`
 }
 
-// HostPort returns the host:port string for Jaeger
-func (c *JaegerConfig) HostPort() string {
+// HostPort returns the host:port string for the tracing backend
+func (c *TempoConfig) HostPort() string {
 	return fmt.Sprintf("%s:%s", c.Host, c.Port)
 }
 
