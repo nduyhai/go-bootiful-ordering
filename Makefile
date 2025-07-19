@@ -6,7 +6,7 @@ GO := go
 # Go build flags
 BUILD_FLAGS := -ldflags "-s -w"
 
-.PHONY: all build run-% test fmt lint clean generate docker-rebuild
+.PHONY: all build run-% test fmt lint clean generate docker-rebuild docker-recreate
 
 ## Default target: build all binaries
 all: build
@@ -59,3 +59,9 @@ clean:
 docker-rebuild:
 	@echo ">> Rebuilding Docker images..."
 	docker-compose build order product
+
+## Recreate Docker Compose environment
+docker-recreate:
+	@echo ">> Recreating Docker Compose environment..."
+	docker-compose down
+	docker-compose up -d --force-recreate

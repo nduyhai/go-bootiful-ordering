@@ -120,10 +120,14 @@ services:
       - PYROSCOPE_HOST=pyroscope
       - PYROSCOPE_PORT=4040
     depends_on:
-      - postgres
-      - tempo
-      - prometheus
-      - pyroscope
+      postgres:
+        condition: service_healthy
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_healthy
+      pyroscope:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
       interval: 10s
@@ -157,11 +161,16 @@ services:
       - PYROSCOPE_HOST=pyroscope
       - PYROSCOPE_PORT=4040
     depends_on:
-      - postgres
-      - redis
-      - tempo
-      - prometheus
-      - pyroscope
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      tempo:
+        condition: service_started
+      prometheus:
+        condition: service_healthy
+      pyroscope:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/health"]
       interval: 10s
