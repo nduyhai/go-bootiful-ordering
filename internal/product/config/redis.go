@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"github.com/redis/go-redis/v9"
+	"os"
 	"time"
 )
 
@@ -47,4 +48,12 @@ func NewRedisClient(config *RedisConfig) (*redis.Client, error) {
 	}
 
 	return client, nil
+}
+
+// Helper function to get environment variable with a default value
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
 }

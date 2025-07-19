@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -69,6 +70,15 @@ type DBConfig struct {
 	Password string `yaml:"password"`
 	Name     string `yaml:"name"`
 	SSLMode  string `yaml:"sslMode"`
+
+	// Connection pool settings
+	MaxIdleConns    int           `yaml:"maxIdleConns"`
+	MaxOpenConns    int           `yaml:"maxOpenConns"`
+	ConnMaxLifetime time.Duration `yaml:"connMaxLifetime"`
+
+	// Additional PostgreSQL parameters
+	ApplicationName string `yaml:"applicationName"`
+	ConnectTimeout  int    `yaml:"connectTimeout"` // in seconds
 }
 
 // ServerConfig holds HTTP and gRPC server configuration
@@ -87,12 +97,73 @@ type GRPCConfig struct {
 	Port string `yaml:"port"`
 }
 
-// DSN returns the data source name for the database connection
+// DSN returns the data source name for the database connection in key=value format
 func (c *DBConfig) DSN() string {
-	return fmt.Sprintf(
+	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		c.Host, c.Port, c.User, c.Password, c.Name, c.SSLMode,
 	)
+
+	// Add optional parameters if they are set
+	if c.ApplicationName != "" {
+		dsn += fmt.Sprintf(" application_name=%s", c.ApplicationName)
+	}
+
+	if c.ConnectTimeout > 0 {
+		dsn += fmt.Sprintf(" connect_timeout=%d", c.ConnectTimeout)
+	}
+
+	return dsn
+}
+
+// DSNURL returns the data source name for the database connection in URL format
+func (c *DBConfig) DSNURL() string {
+	// Base URL with credentials and host
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		c.User, c.Password, c.Host, c.Port, c.Name)
+
+	// Start query parameters
+	params := []string{fmt.Sprintf("sslmode=%s", c.SSLMode)}
+
+	// Add optional parameters if they are set
+	if c.ApplicationName != "" {
+		params = append(params, fmt.Sprintf("application_name=%s", c.ApplicationName))
+	}
+
+	if c.ConnectTimeout > 0 {
+		params = append(params, fmt.Sprintf("connect_timeout=%d", c.ConnectTimeout))
+	}
+
+	// Join all parameters with &
+	if len(params) > 0 {
+		url += "?" + params[0]
+		for i := 1; i < len(params); i++ {
+			url += "&" + params[i]
+		}
+	}
+
+	return url
+}
+
+// Validate checks if the database configuration is valid
+func (c *DBConfig) Validate() error {
+	if c.Host == "" {
+		return fmt.Errorf("database host is required")
+	}
+
+	if c.Port == "" {
+		return fmt.Errorf("database port is required")
+	}
+
+	if c.User == "" {
+		return fmt.Errorf("database user is required")
+	}
+
+	if c.Name == "" {
+		return fmt.Errorf("database name is required")
+	}
+
+	return nil
 }
 
 // LoadConfig loads configuration from a YAML file

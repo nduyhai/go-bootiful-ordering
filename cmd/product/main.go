@@ -23,7 +23,7 @@ import (
 	"go-bootiful-ordering/internal/pkg/migrate"
 	"go-bootiful-ordering/internal/pkg/profiling"
 	"go-bootiful-ordering/internal/pkg/tracing"
-	productConfig "go-bootiful-ordering/internal/product/config"
+	productConfig "go-bootiful-ordering/internal/product/config" // Still needed for RedisConfig
 	productHandler "go-bootiful-ordering/internal/product/handler"
 	productRepository "go-bootiful-ordering/internal/product/repository"
 	productService "go-bootiful-ordering/internal/product/service"
@@ -222,16 +222,13 @@ func InitProfiling(lc fx.Lifecycle, log *zap.Logger, cfg *config.Config) (*Profi
 	return &ProfilingService{Profiler: profiler}, nil
 }
 
-// NewDatabaseConfig creates a database configuration from the YAML configuration
-func NewDatabaseConfig(cfg *config.Config) *productConfig.DatabaseConfig {
-	return &productConfig.DatabaseConfig{
-		Host:     cfg.DB.Host,
-		Port:     cfg.DB.Port,
-		User:     cfg.DB.User,
-		Password: cfg.DB.Password,
-		DBName:   cfg.DB.Name,
-		SSLMode:  cfg.DB.SSLMode,
+// GetDBConfig returns the database configuration from the YAML configuration
+func GetDBConfig(cfg *config.Config) *config.DBConfig {
+	// If DB config is not set in the YAML, create a default one for the product service
+	if cfg.DB.Host == "" {
+		return config.NewDefaultDBConfig("products")
 	}
+	return &cfg.DB
 }
 
 // NewRedisConfig creates a Redis configuration from the YAML configuration
@@ -245,13 +242,13 @@ func NewRedisConfig(cfg *config.Config) *productConfig.RedisConfig {
 }
 
 // RunMigrations runs database migrations
-func RunMigrations(log *zap.Logger, dbConfig *productConfig.DatabaseConfig) error {
+func RunMigrations(log *zap.Logger, dbConfig *config.DBConfig) error {
 	log.Info("Running database migrations for product service")
 
 	// Build DSN
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.DBName, dbConfig.SSLMode,
+		dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name, dbConfig.SSLMode,
 	)
 
 	// Create migration config
@@ -330,8 +327,8 @@ func main() {
 		}),
 
 		// Database configuration and connection
-		fx.Provide(NewDatabaseConfig),
-		fx.Provide(productConfig.NewGormDB),
+		fx.Provide(GetDBConfig),
+		fx.Provide(config.NewGormDB),
 
 		// Redis configuration and connection
 		fx.Provide(NewRedisConfig),

@@ -6,7 +6,7 @@ GO := go
 # Go build flags
 BUILD_FLAGS := -ldflags "-s -w"
 
-.PHONY: all build run-% test fmt lint clean generate
+.PHONY: all build run-% test fmt lint clean generate docker-rebuild
 
 ## Default target: build all binaries
 all: build
@@ -54,3 +54,8 @@ generate:
 clean:
 	@echo ">> Cleaning up..."
 	rm -rf $(BIN_DIR)
+
+## Rebuild Docker images
+docker-rebuild:
+	@echo ">> Rebuilding Docker images..."
+	docker-compose build order product

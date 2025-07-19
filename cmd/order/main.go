@@ -16,7 +16,6 @@ import (
 	"time"
 
 	orderv1 "go-bootiful-ordering/gen/order/v1"
-	orderConfig "go-bootiful-ordering/internal/order/config"
 	orderHandler "go-bootiful-ordering/internal/order/handler"
 	orderRepository "go-bootiful-ordering/internal/order/repository"
 	orderService "go-bootiful-ordering/internal/order/service"
@@ -221,26 +220,23 @@ func InitProfiling(lc fx.Lifecycle, log *zap.Logger, cfg *config.Config) (*Profi
 	return &ProfilingService{Profiler: profiler}, nil
 }
 
-// NewDatabaseConfig creates a database configuration from the YAML configuration
-func NewDatabaseConfig(cfg *config.Config) *orderConfig.DatabaseConfig {
-	return &orderConfig.DatabaseConfig{
-		Host:     cfg.DB.Host,
-		Port:     cfg.DB.Port,
-		User:     cfg.DB.User,
-		Password: cfg.DB.Password,
-		DBName:   cfg.DB.Name,
-		SSLMode:  cfg.DB.SSLMode,
+// GetDBConfig returns the database configuration from the YAML configuration
+func GetDBConfig(cfg *config.Config) *config.DBConfig {
+	// If DB config is not set in the YAML, create a default one for the order service
+	if cfg.DB.Host == "" {
+		return config.NewDefaultDBConfig("orders")
 	}
+	return &cfg.DB
 }
 
 // RunMigrations runs database migrations
-func RunMigrations(log *zap.Logger, dbConfig *orderConfig.DatabaseConfig) error {
+func RunMigrations(log *zap.Logger, dbConfig *config.DBConfig) error {
 	log.Info("Running database migrations for order service")
 
 	// Build DSN
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.DBName, dbConfig.SSLMode,
+		dbConfig.User, dbConfig.Password, dbConfig.Host, dbConfig.Port, dbConfig.Name, dbConfig.SSLMode,
 	)
 
 	// Create migration config
@@ -290,8 +286,8 @@ func main() {
 		}),
 
 		// Database configuration and connection
-		fx.Provide(NewDatabaseConfig),
-		fx.Provide(orderConfig.NewGormDB),
+		fx.Provide(GetDBConfig),
+		fx.Provide(config.NewGormDB),
 
 		// Order repository
 		fx.Provide(fx.Annotate(orderRepository.NewGormOrderRepository, fx.As(new(orderRepository.OrderRepository)))),
