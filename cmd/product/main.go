@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/grafana/pyroscope-go"
 	"github.com/opentracing/opentracing-go"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
@@ -20,6 +21,7 @@ import (
 	"go-bootiful-ordering/internal/pkg/health"
 	"go-bootiful-ordering/internal/pkg/metrics"
 	"go-bootiful-ordering/internal/pkg/migrate"
+	"go-bootiful-ordering/internal/pkg/profiling"
 	"go-bootiful-ordering/internal/pkg/tracing"
 	productConfig "go-bootiful-ordering/internal/product/config"
 	productHandler "go-bootiful-ordering/internal/product/handler"
@@ -189,6 +191,37 @@ func InitMetrics(log *zap.Logger, cfg *config.Config) *MetricsService {
 	return &MetricsService{}
 }
 
+// ProfilingService represents the profiling service
+type ProfilingService struct {
+	Profiler *pyroscope.Profiler
+}
+
+// InitProfiling initializes the Pyroscope profiler
+func InitProfiling(lc fx.Lifecycle, log *zap.Logger, cfg *config.Config) (*ProfilingService, error) {
+	log.Info("Initializing Pyroscope profiler")
+
+	// Get the Pyroscope server address from config
+	serverAddress := cfg.Pyroscope.ServerAddress()
+
+	// Initialize the profiler
+	profiler, err := profiling.InitProfiling(cfg.Service.Name, serverAddress)
+	if err != nil {
+		log.Error("Failed to initialize Pyroscope profiler", zap.Error(err))
+		return nil, err
+	}
+
+	// Register lifecycle hooks for the profiler
+	lc.Append(fx.Hook{
+		OnStop: func(ctx context.Context) error {
+			log.Info("Stopping Pyroscope profiler")
+			profiler.Stop()
+			return nil
+		},
+	})
+
+	return &ProfilingService{Profiler: profiler}, nil
+}
+
 // NewDatabaseConfig creates a database configuration from the YAML configuration
 func NewDatabaseConfig(cfg *config.Config) *productConfig.DatabaseConfig {
 	return &productConfig.DatabaseConfig{
@@ -239,9 +272,10 @@ func main() {
 		fx.Provide(fx.Annotate(
 			NewHTTPServer,
 			fx.ParamTags(``, ``))),
-		fx.Provide(LoadConfig),  // Provide the configuration
-		fx.Provide(InitTracer),  // Provide the tracer
-		fx.Provide(InitMetrics), // Provide metrics initialization
+		fx.Provide(LoadConfig),    // Provide the configuration
+		fx.Provide(InitTracer),    // Provide the tracer
+		fx.Provide(InitMetrics),   // Provide metrics initialization
+		fx.Provide(InitProfiling), // Provide profiling initialization
 		fx.Provide(fx.Annotate(
 			NewGinEngine,
 			fx.ParamTags(`group:"routes"`, ``))),

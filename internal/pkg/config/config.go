@@ -10,12 +10,13 @@ import (
 
 // Config represents the application configuration
 type Config struct {
-	Service ServiceConfig `yaml:"service"`
-	Jaeger  TempoConfig   `yaml:"jaeger"` // Still using "jaeger" in YAML for backward compatibility
-	Tempo   TempoConfig   `yaml:"tempo"`  // New field for explicit Tempo config
-	Redis   RedisConfig   `yaml:"redis"`
-	DB      DBConfig      `yaml:"db"`
-	Server  ServerConfig  `yaml:"server"`
+	Service   ServiceConfig   `yaml:"service"`
+	Jaeger    TempoConfig     `yaml:"jaeger"` // Still using "jaeger" in YAML for backward compatibility
+	Tempo     TempoConfig     `yaml:"tempo"`  // New field for explicit Tempo config
+	Pyroscope PyroscopeConfig `yaml:"pyroscope"`
+	Redis     RedisConfig     `yaml:"redis"`
+	DB        DBConfig        `yaml:"db"`
+	Server    ServerConfig    `yaml:"server"`
 }
 
 // ServiceConfig holds service-specific configuration
@@ -34,6 +35,17 @@ type TempoConfig struct {
 // HostPort returns the host:port string for the tracing backend
 func (c *TempoConfig) HostPort() string {
 	return fmt.Sprintf("%s:%s", c.Host, c.Port)
+}
+
+// PyroscopeConfig holds profiling configuration for Pyroscope
+type PyroscopeConfig struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
+}
+
+// ServerAddress returns the server address for the Pyroscope connection
+func (c *PyroscopeConfig) ServerAddress() string {
+	return fmt.Sprintf("http://%s:%s", c.Host, c.Port)
 }
 
 // RedisConfig holds Redis configuration
