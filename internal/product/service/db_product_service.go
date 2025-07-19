@@ -9,12 +9,12 @@ import (
 
 // DBProductService provides an implementation of ProductService that uses a database repository
 type DBProductService struct {
-	log  *zap.Logger
+	log  *zap.SugaredLogger
 	repo repository.ProductRepository
 }
 
 // NewDBProductService creates a new DBProductService
-func NewDBProductService(log *zap.Logger, repo repository.ProductRepository) *DBProductService {
+func NewDBProductService(log *zap.SugaredLogger, repo repository.ProductRepository) *DBProductService {
 	return &DBProductService{
 		log:  log,
 		repo: repo,
@@ -23,9 +23,8 @@ func NewDBProductService(log *zap.Logger, repo repository.ProductRepository) *DB
 
 // CreateProduct creates a new product using the repository
 func (s *DBProductService) CreateProduct(ctx context.Context, name, description string, price int64, stock int32, category string) (*domain.Product, error) {
-	s.log.Info("DBProductService_CreateProduct",
-		zap.String("name", name),
-		zap.String("category", category))
+	s.log.Infof("DBProductService_CreateProduct name=%s category=%s",
+		name, category)
 
 	// Create a new product domain object
 	product := &domain.Product{
@@ -43,7 +42,7 @@ func (s *DBProductService) CreateProduct(ctx context.Context, name, description 
 
 // GetProduct retrieves a product by ID using the repository
 func (s *DBProductService) GetProduct(ctx context.Context, productID string) (*domain.Product, error) {
-	s.log.Info("DBProductService_GetProduct", zap.String("productID", productID))
+	s.log.Infof("DBProductService_GetProduct productID=%s", productID)
 
 	// Use the repository to retrieve the product
 	return s.repo.GetProduct(ctx, productID)
@@ -51,10 +50,8 @@ func (s *DBProductService) GetProduct(ctx context.Context, productID string) (*d
 
 // ListProducts retrieves a list of products using the repository
 func (s *DBProductService) ListProducts(ctx context.Context, category string, pageSize int32, pageToken string) ([]*domain.Product, string, error) {
-	s.log.Info("DBProductService_ListProducts",
-		zap.String("category", category),
-		zap.Int32("pageSize", pageSize),
-		zap.String("pageToken", pageToken))
+	s.log.Infof("DBProductService_ListProducts category=%s pageSize=%d pageToken=%s",
+		category, pageSize, pageToken)
 
 	// Use the repository to list products
 	return s.repo.ListProducts(ctx, category, pageSize, pageToken)
@@ -62,10 +59,8 @@ func (s *DBProductService) ListProducts(ctx context.Context, category string, pa
 
 // UpdateProduct updates a product using the repository
 func (s *DBProductService) UpdateProduct(ctx context.Context, productID, name, description string, price int64, stock int32, category string) (*domain.Product, error) {
-	s.log.Info("DBProductService_UpdateProduct",
-		zap.String("productID", productID),
-		zap.String("name", name),
-		zap.String("category", category))
+	s.log.Infof("DBProductService_UpdateProduct productID=%s name=%s category=%s",
+		productID, name, category)
 
 	// First, get the existing product
 	existingProduct, err := s.repo.GetProduct(ctx, productID)
@@ -86,7 +81,7 @@ func (s *DBProductService) UpdateProduct(ctx context.Context, productID, name, d
 
 // DeleteProduct deletes a product using the repository
 func (s *DBProductService) DeleteProduct(ctx context.Context, productID string) error {
-	s.log.Info("DBProductService_DeleteProduct", zap.String("productID", productID))
+	s.log.Infof("DBProductService_DeleteProduct productID=%s", productID)
 
 	// Use the repository to delete the product
 	return s.repo.DeleteProduct(ctx, productID)

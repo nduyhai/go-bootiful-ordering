@@ -17,12 +17,12 @@ type Route interface {
 
 // CreateOrderHandler handles order creation requests
 type CreateOrderHandler struct {
-	log     *zap.Logger
+	log     *zap.SugaredLogger
 	service service.OrderService
 }
 
 // NewCreateOrderHandler creates a new CreateOrderHandler
-func NewCreateOrderHandler(log *zap.Logger, service service.OrderService) *CreateOrderHandler {
+func NewCreateOrderHandler(log *zap.SugaredLogger, service service.OrderService) *CreateOrderHandler {
 	return &CreateOrderHandler{
 		log:     log,
 		service: service,
@@ -47,14 +47,14 @@ func (h *CreateOrderHandler) CreateOrder(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		h.log.Error("Failed to decode request", zap.Error(err))
+		h.log.Errorf("Failed to decode request: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	order, err := h.service.CreateOrder(c.Request.Context(), request.CustomerID, request.Items)
 	if err != nil {
-		h.log.Error("Failed to create order", zap.Error(err))
+		h.log.Errorf("Failed to create order: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create order"})
 		return
 	}
@@ -64,12 +64,12 @@ func (h *CreateOrderHandler) CreateOrder(c *gin.Context) {
 
 // GetOrderHandler handles requests to get an order by ID
 type GetOrderHandler struct {
-	log     *zap.Logger
+	log     *zap.SugaredLogger
 	service service.OrderService
 }
 
 // NewGetOrderHandler creates a new GetOrderHandler
-func NewGetOrderHandler(log *zap.Logger, service service.OrderService) *GetOrderHandler {
+func NewGetOrderHandler(log *zap.SugaredLogger, service service.OrderService) *GetOrderHandler {
 	return &GetOrderHandler{
 		log:     log,
 		service: service,
@@ -96,7 +96,7 @@ func (h *GetOrderHandler) GetOrder(c *gin.Context) {
 
 	order, err := h.service.GetOrder(c.Request.Context(), orderID)
 	if err != nil {
-		h.log.Error("Failed to get order", zap.Error(err), zap.String("orderID", orderID))
+		h.log.Errorf("Failed to get order: %v, orderID=%s", err, orderID)
 		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		return
 	}
@@ -106,12 +106,12 @@ func (h *GetOrderHandler) GetOrder(c *gin.Context) {
 
 // ListOrdersHandler handles requests to list orders
 type ListOrdersHandler struct {
-	log     *zap.Logger
+	log     *zap.SugaredLogger
 	service service.OrderService
 }
 
 // NewListOrdersHandler creates a new ListOrdersHandler
-func NewListOrdersHandler(log *zap.Logger, service service.OrderService) *ListOrdersHandler {
+func NewListOrdersHandler(log *zap.SugaredLogger, service service.OrderService) *ListOrdersHandler {
 	return &ListOrdersHandler{
 		log:     log,
 		service: service,
@@ -148,7 +148,7 @@ func (h *ListOrdersHandler) ListOrders(c *gin.Context) {
 
 	orders, nextPageToken, err := h.service.ListOrders(c.Request.Context(), customerID, pageSize, pageToken)
 	if err != nil {
-		h.log.Error("Failed to list orders", zap.Error(err), zap.String("customerID", customerID))
+		h.log.Errorf("Failed to list orders: %v, customerID=%s", err, customerID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list orders"})
 		return
 	}
@@ -166,12 +166,12 @@ func (h *ListOrdersHandler) ListOrders(c *gin.Context) {
 
 // UpdateOrderStatusHandler handles requests to update an order's status
 type UpdateOrderStatusHandler struct {
-	log     *zap.Logger
+	log     *zap.SugaredLogger
 	service service.OrderService
 }
 
 // NewUpdateOrderStatusHandler creates a new UpdateOrderStatusHandler
-func NewUpdateOrderStatusHandler(log *zap.Logger, service service.OrderService) *UpdateOrderStatusHandler {
+func NewUpdateOrderStatusHandler(log *zap.SugaredLogger, service service.OrderService) *UpdateOrderStatusHandler {
 	return &UpdateOrderStatusHandler{
 		log:     log,
 		service: service,
@@ -201,14 +201,14 @@ func (h *UpdateOrderStatusHandler) UpdateOrderStatus(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
-		h.log.Error("Failed to decode request", zap.Error(err))
+		h.log.Errorf("Failed to decode request: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	order, err := h.service.UpdateOrderStatus(c.Request.Context(), orderID, request.Status)
 	if err != nil {
-		h.log.Error("Failed to update order status", zap.Error(err), zap.String("orderID", orderID))
+		h.log.Errorf("Failed to update order status: %v, orderID=%s", err, orderID)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order status"})
 		return
 	}

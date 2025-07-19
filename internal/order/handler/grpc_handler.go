@@ -14,12 +14,12 @@ import (
 // GRPCOrderServer implements the OrderService gRPC server
 type GRPCOrderServer struct {
 	orderv1.UnimplementedOrderServiceServer
-	log     *zap.Logger
+	log     *zap.SugaredLogger
 	service service.OrderService
 }
 
 // NewGRPCOrderServer creates a new GRPCOrderServer
-func NewGRPCOrderServer(log *zap.Logger, service service.OrderService) *GRPCOrderServer {
+func NewGRPCOrderServer(log *zap.SugaredLogger, service service.OrderService) *GRPCOrderServer {
 	return &GRPCOrderServer{
 		log:     log,
 		service: service,
@@ -28,7 +28,7 @@ func NewGRPCOrderServer(log *zap.Logger, service service.OrderService) *GRPCOrde
 
 // CreateOrder implements the CreateOrder RPC method
 func (s *GRPCOrderServer) CreateOrder(ctx context.Context, req *orderv1.CreateOrderRequest) (*orderv1.CreateOrderResponse, error) {
-	s.log.Info("GRPCOrderServer_CreateOrder", zap.String("customerID", req.CustomerId))
+	s.log.Infof("GRPCOrderServer_CreateOrder customerID=%s", req.CustomerId)
 
 	if req.CustomerId == "" {
 		return nil, status.Error(codes.InvalidArgument, "customer_id is required")
@@ -51,7 +51,7 @@ func (s *GRPCOrderServer) CreateOrder(ctx context.Context, req *orderv1.CreateOr
 	// Create order using the service
 	order, err := s.service.CreateOrder(ctx, req.CustomerId, items)
 	if err != nil {
-		s.log.Error("Failed to create order", zap.Error(err))
+		s.log.Errorf("Failed to create order: %v", err)
 		return nil, status.Error(codes.Internal, "failed to create order")
 	}
 
@@ -63,7 +63,7 @@ func (s *GRPCOrderServer) CreateOrder(ctx context.Context, req *orderv1.CreateOr
 
 // GetOrder implements the GetOrder RPC method
 func (s *GRPCOrderServer) GetOrder(ctx context.Context, req *orderv1.GetOrderRequest) (*orderv1.GetOrderResponse, error) {
-	s.log.Info("GRPCOrderServer_GetOrder", zap.String("orderID", req.OrderId))
+	s.log.Infof("GRPCOrderServer_GetOrder orderID=%s", req.OrderId)
 
 	if req.OrderId == "" {
 		return nil, status.Error(codes.InvalidArgument, "order_id is required")
@@ -72,7 +72,7 @@ func (s *GRPCOrderServer) GetOrder(ctx context.Context, req *orderv1.GetOrderReq
 	// Get order using the service
 	order, err := s.service.GetOrder(ctx, req.OrderId)
 	if err != nil {
-		s.log.Error("Failed to get order", zap.Error(err), zap.String("orderID", req.OrderId))
+		s.log.Errorf("Failed to get order: %v, orderID=%s", err, req.OrderId)
 		return nil, status.Error(codes.NotFound, "order not found")
 	}
 
@@ -84,10 +84,8 @@ func (s *GRPCOrderServer) GetOrder(ctx context.Context, req *orderv1.GetOrderReq
 
 // ListOrders implements the ListOrders RPC method
 func (s *GRPCOrderServer) ListOrders(ctx context.Context, req *orderv1.ListOrdersRequest) (*orderv1.ListOrdersResponse, error) {
-	s.log.Info("GRPCOrderServer_ListOrders",
-		zap.String("customerID", req.CustomerId),
-		zap.Int32("pageSize", req.PageSize),
-		zap.String("pageToken", req.PageToken))
+	s.log.Infof("GRPCOrderServer_ListOrders customerID=%s pageSize=%d pageToken=%s",
+		req.CustomerId, req.PageSize, req.PageToken)
 
 	if req.CustomerId == "" {
 		return nil, status.Error(codes.InvalidArgument, "customer_id is required")
@@ -96,7 +94,7 @@ func (s *GRPCOrderServer) ListOrders(ctx context.Context, req *orderv1.ListOrder
 	// List orders using the service
 	orders, nextPageToken, err := s.service.ListOrders(ctx, req.CustomerId, req.PageSize, req.PageToken)
 	if err != nil {
-		s.log.Error("Failed to list orders", zap.Error(err), zap.String("customerID", req.CustomerId))
+		s.log.Errorf("Failed to list orders: %v, customerID=%s", err, req.CustomerId)
 		return nil, status.Error(codes.Internal, "failed to list orders")
 	}
 
@@ -114,9 +112,8 @@ func (s *GRPCOrderServer) ListOrders(ctx context.Context, req *orderv1.ListOrder
 
 // UpdateOrderStatus implements the UpdateOrderStatus RPC method
 func (s *GRPCOrderServer) UpdateOrderStatus(ctx context.Context, req *orderv1.UpdateOrderStatusRequest) (*orderv1.UpdateOrderStatusResponse, error) {
-	s.log.Info("GRPCOrderServer_UpdateOrderStatus",
-		zap.String("orderID", req.OrderId),
-		zap.Int32("status", int32(req.Status)))
+	s.log.Infof("GRPCOrderServer_UpdateOrderStatus orderID=%s status=%d",
+		req.OrderId, int32(req.Status))
 
 	if req.OrderId == "" {
 		return nil, status.Error(codes.InvalidArgument, "order_id is required")
@@ -142,7 +139,7 @@ func (s *GRPCOrderServer) UpdateOrderStatus(ctx context.Context, req *orderv1.Up
 	// Update order status using the service
 	order, err := s.service.UpdateOrderStatus(ctx, req.OrderId, orderStatus)
 	if err != nil {
-		s.log.Error("Failed to update order status", zap.Error(err), zap.String("orderID", req.OrderId))
+		s.log.Errorf("Failed to update order status: %v, orderID=%s", err, req.OrderId)
 		return nil, status.Error(codes.Internal, "failed to update order status")
 	}
 

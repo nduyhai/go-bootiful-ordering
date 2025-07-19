@@ -14,12 +14,12 @@ import (
 // GRPCProductServer implements the ProductService gRPC server
 type GRPCProductServer struct {
 	productv1.UnimplementedProductServiceServer
-	log     *zap.Logger
+	log     *zap.SugaredLogger
 	service service.ProductService
 }
 
 // NewGRPCProductServer creates a new GRPCProductServer
-func NewGRPCProductServer(log *zap.Logger, service service.ProductService) *GRPCProductServer {
+func NewGRPCProductServer(log *zap.SugaredLogger, service service.ProductService) *GRPCProductServer {
 	return &GRPCProductServer{
 		log:     log,
 		service: service,
@@ -28,9 +28,8 @@ func NewGRPCProductServer(log *zap.Logger, service service.ProductService) *GRPC
 
 // CreateProduct implements the CreateProduct RPC method
 func (s *GRPCProductServer) CreateProduct(ctx context.Context, req *productv1.CreateProductRequest) (*productv1.CreateProductResponse, error) {
-	s.log.Info("GRPCProductServer_CreateProduct",
-		zap.String("name", req.Name),
-		zap.String("category", req.Category))
+	s.log.Infof("GRPCProductServer_CreateProduct name=%s category=%s",
+		req.Name, req.Category)
 
 	// Validate request
 	if req.Name == "" {
@@ -48,7 +47,7 @@ func (s *GRPCProductServer) CreateProduct(ctx context.Context, req *productv1.Cr
 	// Create product using the service
 	product, err := s.service.CreateProduct(ctx, req.Name, req.Description, req.Price, req.Stock, req.Category)
 	if err != nil {
-		s.log.Error("Failed to create product", zap.Error(err))
+		s.log.Errorf("Failed to create product: %v", err)
 		return nil, status.Error(codes.Internal, "failed to create product")
 	}
 
@@ -60,7 +59,7 @@ func (s *GRPCProductServer) CreateProduct(ctx context.Context, req *productv1.Cr
 
 // GetProduct implements the GetProduct RPC method
 func (s *GRPCProductServer) GetProduct(ctx context.Context, req *productv1.GetProductRequest) (*productv1.GetProductResponse, error) {
-	s.log.Info("GRPCProductServer_GetProduct", zap.String("productID", req.ProductId))
+	s.log.Infof("GRPCProductServer_GetProduct productID=%s", req.ProductId)
 
 	if req.ProductId == "" {
 		return nil, status.Error(codes.InvalidArgument, "product_id is required")
@@ -69,7 +68,7 @@ func (s *GRPCProductServer) GetProduct(ctx context.Context, req *productv1.GetPr
 	// Get product using the service
 	product, err := s.service.GetProduct(ctx, req.ProductId)
 	if err != nil {
-		s.log.Error("Failed to get product", zap.Error(err), zap.String("productID", req.ProductId))
+		s.log.Errorf("Failed to get product: %v, productID=%s", err, req.ProductId)
 		return nil, status.Error(codes.NotFound, "product not found")
 	}
 
@@ -81,15 +80,13 @@ func (s *GRPCProductServer) GetProduct(ctx context.Context, req *productv1.GetPr
 
 // ListProducts implements the ListProducts RPC method
 func (s *GRPCProductServer) ListProducts(ctx context.Context, req *productv1.ListProductsRequest) (*productv1.ListProductsResponse, error) {
-	s.log.Info("GRPCProductServer_ListProducts",
-		zap.String("category", req.Category),
-		zap.Int32("pageSize", req.PageSize),
-		zap.String("pageToken", req.PageToken))
+	s.log.Infof("GRPCProductServer_ListProducts category=%s pageSize=%d pageToken=%s",
+		req.Category, req.PageSize, req.PageToken)
 
 	// List products using the service
 	products, nextPageToken, err := s.service.ListProducts(ctx, req.Category, req.PageSize, req.PageToken)
 	if err != nil {
-		s.log.Error("Failed to list products", zap.Error(err))
+		s.log.Errorf("Failed to list products: %v", err)
 		return nil, status.Error(codes.Internal, "failed to list products")
 	}
 
@@ -107,10 +104,8 @@ func (s *GRPCProductServer) ListProducts(ctx context.Context, req *productv1.Lis
 
 // UpdateProduct implements the UpdateProduct RPC method
 func (s *GRPCProductServer) UpdateProduct(ctx context.Context, req *productv1.UpdateProductRequest) (*productv1.UpdateProductResponse, error) {
-	s.log.Info("GRPCProductServer_UpdateProduct",
-		zap.String("productID", req.ProductId),
-		zap.String("name", req.Name),
-		zap.String("category", req.Category))
+	s.log.Infof("GRPCProductServer_UpdateProduct productID=%s name=%s category=%s",
+		req.ProductId, req.Name, req.Category)
 
 	if req.ProductId == "" {
 		return nil, status.Error(codes.InvalidArgument, "product_id is required")
@@ -131,7 +126,7 @@ func (s *GRPCProductServer) UpdateProduct(ctx context.Context, req *productv1.Up
 	// Update product using the service
 	product, err := s.service.UpdateProduct(ctx, req.ProductId, req.Name, req.Description, req.Price, req.Stock, req.Category)
 	if err != nil {
-		s.log.Error("Failed to update product", zap.Error(err), zap.String("productID", req.ProductId))
+		s.log.Errorf("Failed to update product: %v, productID=%s", err, req.ProductId)
 		return nil, status.Error(codes.Internal, "failed to update product")
 	}
 

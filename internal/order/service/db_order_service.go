@@ -9,12 +9,12 @@ import (
 
 // DBOrderService provides an implementation of OrderService that uses a database repository
 type DBOrderService struct {
-	log  *zap.Logger
+	log  *zap.SugaredLogger
 	repo repository.OrderRepository
 }
 
 // NewDBOrderService creates a new DBOrderService
-func NewDBOrderService(log *zap.Logger, repo repository.OrderRepository) *DBOrderService {
+func NewDBOrderService(log *zap.SugaredLogger, repo repository.OrderRepository) *DBOrderService {
 	return &DBOrderService{
 		log:  log,
 		repo: repo,
@@ -23,7 +23,7 @@ func NewDBOrderService(log *zap.Logger, repo repository.OrderRepository) *DBOrde
 
 // CreateOrder creates a new order using the repository
 func (s *DBOrderService) CreateOrder(ctx context.Context, customerID string, items []domain.OrderItem) (*domain.Order, error) {
-	s.log.Info("DBOrderService_CreateOrder", zap.String("customerID", customerID))
+	s.log.Infof("DBOrderService_CreateOrder customerID=%s", customerID)
 
 	// Create a new order domain object
 	order := &domain.Order{
@@ -38,7 +38,7 @@ func (s *DBOrderService) CreateOrder(ctx context.Context, customerID string, ite
 
 // GetOrder retrieves an order by ID using the repository
 func (s *DBOrderService) GetOrder(ctx context.Context, orderID string) (*domain.Order, error) {
-	s.log.Info("DBOrderService_GetOrder", zap.String("orderID", orderID))
+	s.log.Infof("DBOrderService_GetOrder orderID=%s", orderID)
 
 	// Use the repository to retrieve the order
 	return s.repo.GetOrder(ctx, orderID)
@@ -46,10 +46,8 @@ func (s *DBOrderService) GetOrder(ctx context.Context, orderID string) (*domain.
 
 // ListOrders retrieves a list of orders using the repository
 func (s *DBOrderService) ListOrders(ctx context.Context, customerID string, pageSize int32, pageToken string) ([]*domain.Order, string, error) {
-	s.log.Info("DBOrderService_ListOrders",
-		zap.String("customerID", customerID),
-		zap.Int32("pageSize", pageSize),
-		zap.String("pageToken", pageToken))
+	s.log.Infof("DBOrderService_ListOrders customerID=%s pageSize=%d pageToken=%s",
+		customerID, pageSize, pageToken)
 
 	// Use the repository to list orders
 	return s.repo.ListOrders(ctx, customerID, pageSize, pageToken)
@@ -57,9 +55,8 @@ func (s *DBOrderService) ListOrders(ctx context.Context, customerID string, page
 
 // UpdateOrderStatus updates the status of an order using the repository
 func (s *DBOrderService) UpdateOrderStatus(ctx context.Context, orderID string, status domain.OrderStatus) (*domain.Order, error) {
-	s.log.Info("DBOrderService_UpdateOrderStatus",
-		zap.String("orderID", orderID),
-		zap.Int("status", int(status)))
+	s.log.Infof("DBOrderService_UpdateOrderStatus orderID=%s status=%d",
+		orderID, int(status))
 
 	// Use the repository to update the order status
 	return s.repo.UpdateOrderStatus(ctx, orderID, status)
