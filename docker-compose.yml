@@ -69,11 +69,6 @@ services:
       - "server"
     volumes:
       - pyroscope-data:/var/lib/pyroscope
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4040/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   grafana:
     image: grafana/grafana:latest
