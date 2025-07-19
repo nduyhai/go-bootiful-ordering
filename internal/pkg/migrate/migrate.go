@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -77,8 +78,11 @@ func RunWithTimeout(dir, dsn string, timeout time.Duration) error {
 
 // runMigrations runs database migrations using golang-migrate
 func runMigrations(dir, dsn string) error {
+	// Convert backslashes to forward slashes for URL compatibility
+	dirWithForwardSlashes := strings.ReplaceAll(dir, "\\", "/")
+
 	// Create source URL for migrations
-	sourceURL := fmt.Sprintf("file://%s", dir)
+	sourceURL := fmt.Sprintf("file://%s", dirWithForwardSlashes)
 
 	// Create a new migrate instance
 	m, err := migrate.New(sourceURL, dsn)
