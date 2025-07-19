@@ -298,10 +298,13 @@ func main() {
 		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
 			return &fxevent.ZapLogger{Logger: log}
 		}),
-		fx.Invoke(func(*gorm.DB) {}), // Add DB to invoke to ensure it's initialized
-		fx.Invoke(RunMigrations),     // Run database migrations
-		fx.Invoke(StartHTTPServer),   // Start the HTTP server with a graceful shutdown
-		fx.Invoke(StartGRPCServer),   // Start the gRPC server
+		fx.Invoke(func(*gorm.DB) {}),                  // Add DB to invoke to ensure it's initialized
+		fx.Invoke(func(tracer opentracing.Tracer) {}), // Add Tracer to invoke to ensure it's initialized
+		fx.Invoke(func(*MetricsService) {}),           // Add MetricsService to invoke to ensure it's initialized
+		fx.Invoke(func(*ProfilingService) {}),         // Add ProfilingService to invoke to ensure it's initialized
+		fx.Invoke(RunMigrations),                      // Run database migrations
+		fx.Invoke(StartHTTPServer),                    // Start the HTTP server with a graceful shutdown
+		fx.Invoke(StartGRPCServer),                    // Start the gRPC server
 	).Run()
 }
 
