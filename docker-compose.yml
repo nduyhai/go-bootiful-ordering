@@ -108,6 +108,17 @@ services:
       - "9092:9092"
     volumes:
       - ./config:/app/config
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=myuser
+      - DB_PASSWORD=secret
+      - DB_NAME=orders
+      - DB_SSLMODE=disable
+      - TEMPO_HOST=tempo
+      - TEMPO_PORT=4317
+      - PYROSCOPE_HOST=pyroscope
+      - PYROSCOPE_PORT=4040
     depends_on:
       - postgres
       - tempo
@@ -130,6 +141,21 @@ services:
       - "9091:9091"
     volumes:
       - ./config:/app/config
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=myuser
+      - DB_PASSWORD=secret
+      - DB_NAME=products
+      - DB_SSLMODE=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - TEMPO_HOST=tempo
+      - TEMPO_PORT=4317
+      - PYROSCOPE_HOST=pyroscope
+      - PYROSCOPE_PORT=4040
     depends_on:
       - postgres
       - redis

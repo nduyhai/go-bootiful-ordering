@@ -4,33 +4,34 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"github.com/spf13/viper"
 )
 
 // Config represents the application configuration
 type Config struct {
-	Service   ServiceConfig   `yaml:"service"`
-	Jaeger    TempoConfig     `yaml:"jaeger"` // Still using "jaeger" in YAML for backward compatibility
-	Tempo     TempoConfig     `yaml:"tempo"`  // New field for explicit Tempo config
-	Pyroscope PyroscopeConfig `yaml:"pyroscope"`
-	Redis     RedisConfig     `yaml:"redis"`
-	DB        DBConfig        `yaml:"db"`
-	Server    ServerConfig    `yaml:"server"`
+	Service   ServiceConfig   `yaml:"service" mapstructure:"service"`
+	Jaeger    TempoConfig     `yaml:"jaeger" mapstructure:"jaeger"` // Still using "jaeger" in YAML for backward compatibility
+	Tempo     TempoConfig     `yaml:"tempo" mapstructure:"tempo"`   // New field for explicit Tempo config
+	Pyroscope PyroscopeConfig `yaml:"pyroscope" mapstructure:"pyroscope"`
+	Redis     RedisConfig     `yaml:"redis" mapstructure:"redis"`
+	DB        DBConfig        `yaml:"db" mapstructure:"db"`
+	Server    ServerConfig    `yaml:"server" mapstructure:"server"`
 }
 
 // ServiceConfig holds service-specific configuration
 type ServiceConfig struct {
-	Name string `yaml:"name"`
+	Name string `yaml:"name" mapstructure:"name"`
 }
 
 // TempoConfig holds tracing configuration for Tempo
 // This replaces JaegerConfig but maintains the same structure
 type TempoConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	LogSpans bool   `yaml:"logSpans"`
+	Host     string `yaml:"host" mapstructure:"host"`
+	Port     string `yaml:"port" mapstructure:"port"`
+	LogSpans bool   `yaml:"logSpans" mapstructure:"logSpans"`
 }
 
 // HostPort returns the host:port string for the tracing backend
@@ -40,8 +41,8 @@ func (c *TempoConfig) HostPort() string {
 
 // PyroscopeConfig holds profiling configuration for Pyroscope
 type PyroscopeConfig struct {
-	Host string `yaml:"host"`
-	Port string `yaml:"port"`
+	Host string `yaml:"host" mapstructure:"host"`
+	Port string `yaml:"port" mapstructure:"port"`
 }
 
 // ServerAddress returns the server address for the Pyroscope connection
@@ -51,10 +52,10 @@ func (c *PyroscopeConfig) ServerAddress() string {
 
 // RedisConfig holds Redis configuration
 type RedisConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	Password string `yaml:"password"`
-	DB       int    `yaml:"db"`
+	Host     string `yaml:"host" mapstructure:"host"`
+	Port     string `yaml:"port" mapstructure:"port"`
+	Password string `yaml:"password" mapstructure:"password"`
+	DB       int    `yaml:"db" mapstructure:"db"`
 }
 
 // Addr returns the address for the Redis connection
@@ -64,37 +65,37 @@ func (c *RedisConfig) Addr() string {
 
 // DBConfig holds database configuration
 type DBConfig struct {
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	User     string `yaml:"user"`
-	Password string `yaml:"password"`
-	Name     string `yaml:"name"`
-	SSLMode  string `yaml:"sslMode"`
+	Host     string `yaml:"host" mapstructure:"host"`
+	Port     string `yaml:"port" mapstructure:"port"`
+	User     string `yaml:"user" mapstructure:"user"`
+	Password string `yaml:"password" mapstructure:"password"`
+	Name     string `yaml:"name" mapstructure:"name"`
+	SSLMode  string `yaml:"sslMode" mapstructure:"sslMode"`
 
 	// Connection pool settings
-	MaxIdleConns    int           `yaml:"maxIdleConns"`
-	MaxOpenConns    int           `yaml:"maxOpenConns"`
-	ConnMaxLifetime time.Duration `yaml:"connMaxLifetime"`
+	MaxIdleConns    int           `yaml:"maxIdleConns" mapstructure:"maxIdleConns"`
+	MaxOpenConns    int           `yaml:"maxOpenConns" mapstructure:"maxOpenConns"`
+	ConnMaxLifetime time.Duration `yaml:"connMaxLifetime" mapstructure:"connMaxLifetime"`
 
 	// Additional PostgreSQL parameters
-	ApplicationName string `yaml:"applicationName"`
-	ConnectTimeout  int    `yaml:"connectTimeout"` // in seconds
+	ApplicationName string `yaml:"applicationName" mapstructure:"applicationName"`
+	ConnectTimeout  int    `yaml:"connectTimeout" mapstructure:"connectTimeout"` // in seconds
 }
 
 // ServerConfig holds HTTP and gRPC server configuration
 type ServerConfig struct {
-	HTTP HTTPConfig `yaml:"http"`
-	GRPC GRPCConfig `yaml:"grpc"`
+	HTTP HTTPConfig `yaml:"http" mapstructure:"http"`
+	GRPC GRPCConfig `yaml:"grpc" mapstructure:"grpc"`
 }
 
 // HTTPConfig holds HTTP server configuration
 type HTTPConfig struct {
-	Port string `yaml:"port"`
+	Port string `yaml:"port" mapstructure:"port"`
 }
 
 // GRPCConfig holds gRPC server configuration
 type GRPCConfig struct {
-	Port string `yaml:"port"`
+	Port string `yaml:"port" mapstructure:"port"`
 }
 
 // DSN returns the data source name for the database connection in key=value format
@@ -166,52 +167,97 @@ func (c *DBConfig) Validate() error {
 	return nil
 }
 
-// LoadConfig loads configuration from a YAML file
+// LoadConfig loads configuration using Viper
 func LoadConfig(configPath string) (*Config, error) {
+	v := viper.New()
+
 	// Set default config path if not provided
 	if configPath == "" {
 		configPath = "config.yaml"
 	}
 
-	// Check if the file exists
+	// Extract the directory and filename from the path
+	configDir := filepath.Dir(configPath)
+	configName := strings.TrimSuffix(filepath.Base(configPath), filepath.Ext(configPath))
+
+	// Configure Viper to read from the config file
+	v.SetConfigName(configName)
+	v.SetConfigType("yaml")
+	v.AddConfigPath(configDir)
+
+	// Check if the file exists before attempting to read it
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("config file not found: %s", configPath)
 	}
 
+	// Configure Viper to read from environment variables
+	v.SetEnvPrefix("")                                 // No prefix for environment variables
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // Replace dots with underscores in env vars
+	v.AutomaticEnv()                                   // Read environment variables that match
+
 	// Read the config file
-	data, err := os.ReadFile(configPath)
-	if err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
 
-	// Parse the YAML
+	// Unmarshal the config into our struct
 	var config Config
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("error parsing config file: %w", err)
+	if err := v.Unmarshal(&config); err != nil {
+		return nil, fmt.Errorf("error parsing config: %w", err)
 	}
 
 	return &config, nil
 }
 
-// LoadServiceConfig loads configuration for a specific service
+// LoadServiceConfig loads configuration for a specific service using Viper
 func LoadServiceConfig(serviceName string) (*Config, error) {
-	// Look for config in the current directory
-	configPath := fmt.Sprintf("config/%s.yaml", serviceName)
+	v := viper.New()
 
-	// If not found, try the parent directory
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		configPath = filepath.Join("..", "config", fmt.Sprintf("%s.yaml", serviceName))
+	// Configure Viper to read from environment variables first
+	v.SetEnvPrefix("")                                 // No prefix for environment variables
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_")) // Replace dots with underscores in env vars
+	v.AutomaticEnv()                                   // Read environment variables that match
+
+	// Try to find the config file in different locations
+	configPaths := []string{
+		fmt.Sprintf("config/%s.yaml", serviceName),
+		filepath.Join("..", "config", fmt.Sprintf("%s.yaml", serviceName)),
+		"config/config.yaml",
+		filepath.Join("..", "config", "config.yaml"),
 	}
 
-	// If still not found, try the default config
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		configPath = "config/config.yaml"
+	// Set the config name and type
+	v.SetConfigType("yaml")
+
+	// Try each config path
+	var configFound bool
+	for _, path := range configPaths {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			configDir := filepath.Dir(path)
+			configName := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+
+			v.SetConfigName(configName)
+			v.AddConfigPath(configDir)
+			configFound = true
+			break
+		}
 	}
 
-	// If still not found, try the parent directory default config
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		configPath = filepath.Join("..", "config", "config.yaml")
+	// If no config file was found, return an error
+	if !configFound {
+		return nil, fmt.Errorf("no config file found for service: %s", serviceName)
 	}
 
-	return LoadConfig(configPath)
+	// Read the config file
+	if err := v.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("error reading config file: %w", err)
+	}
+
+	// Unmarshal the config into our struct
+	var config Config
+	if err := v.Unmarshal(&config); err != nil {
+		return nil, fmt.Errorf("error parsing config: %w", err)
+	}
+
+	return &config, nil
 }

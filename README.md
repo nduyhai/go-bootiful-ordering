@@ -74,14 +74,59 @@ Each migration follows the naming convention `VERSION_NAME.up.sql`. The files co
 
 ## Configuration
 
-The application uses environment variables for configuration:
+The application uses Viper for configuration management, with environment variables taking precedence over configuration files. This means you can:
 
+1. Set environment variables to override any configuration value
+2. Use YAML configuration files as fallback when environment variables are not set
+
+### Environment Variables
+
+Environment variables follow the pattern of the configuration structure with underscores:
+
+- `SERVICE_NAME`: Name of the service
 - `DB_HOST`: PostgreSQL host (default: localhost)
 - `DB_PORT`: PostgreSQL port (default: 5432)
 - `DB_USER`: PostgreSQL user (default: postgres)
 - `DB_PASSWORD`: PostgreSQL password (default: postgres)
 - `DB_NAME`: PostgreSQL database name (default: orders)
-- `DB_SSL_MODE`: PostgreSQL SSL mode (default: disable)
+- `DB_SSLMODE`: PostgreSQL SSL mode (default: disable)
+- `DB_MAXIDLECONNS`: Maximum idle connections (default: 10)
+- `DB_MAXOPENCONNS`: Maximum open connections (default: 100)
+- `DB_CONNMAXLIFETIME`: Connection maximum lifetime in seconds (default: 3600)
+- `DB_APPLICATIONNAME`: Application name for PostgreSQL (default: go-bootiful-ordering)
+- `DB_CONNECTTIMEOUT`: Connection timeout in seconds (default: 10)
+
+### Server Configuration
+
+- `SERVER_HTTP_PORT`: HTTP server port (default: 8080)
+- `SERVER_GRPC_PORT`: gRPC server port (default: 9090)
+
+### Redis Configuration
+
+- `REDIS_HOST`: Redis host (default: localhost)
+- `REDIS_PORT`: Redis port (default: 6379)
+- `REDIS_PASSWORD`: Redis password (default: "")
+- `REDIS_DB`: Redis database number (default: 0)
+
+### Tracing Configuration
+
+- `TEMPO_HOST` or `JAEGER_HOST`: Tracing backend host (default: localhost)
+- `TEMPO_PORT` or `JAEGER_PORT`: Tracing backend port (default: 14268)
+- `TEMPO_LOGSPANS` or `JAEGER_LOGSPANS`: Whether to log spans (default: false)
+
+### Profiling Configuration
+
+- `PYROSCOPE_HOST`: Pyroscope host (default: localhost)
+- `PYROSCOPE_PORT`: Pyroscope port (default: 4040)
+
+### Configuration Files
+
+If environment variables are not set, the application will look for configuration files in the following order:
+
+1. `config/{service-name}.yaml` (e.g., `config/order.yaml` for the order service)
+2. `../config/{service-name}.yaml`
+3. `config/config.yaml`
+4. `../config/config.yaml`
 
 For the migration tool, you can use service-specific environment variables:
 
