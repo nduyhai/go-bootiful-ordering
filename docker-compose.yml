@@ -106,8 +106,8 @@ services:
     container_name: go-bootiful-ordering-order
     command: ["./bin/order"]
     ports:
-      - "8080:8080"
-      - "9090:9090"
+      - "8082:8082"
+      - "9092:9092"
     volumes:
       - ./config:/app/config
     depends_on:

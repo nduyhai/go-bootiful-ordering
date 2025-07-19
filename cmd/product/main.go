@@ -322,8 +322,11 @@ func main() {
 			fx.ParamTags(``, ``, ``, ``))),
 
 		// Logger
-		fx.Provide(func() *zap.SugaredLogger {
-			return zap.NewExample().Sugar()
+		fx.Provide(func() *zap.Logger {
+			return zap.NewExample()
+		}),
+		fx.Provide(func(log *zap.Logger) *zap.SugaredLogger {
+			return log.Sugar()
 		}),
 
 		// Database configuration and connection
