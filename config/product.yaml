@@ -30,9 +30,14 @@ tempo:
   port: "6831"
   logSpans: true
 
+# Pyroscope configuration
+pyroscope:
+  host: localhost
+  port: "4040"
+
 # Server configuration
 server:
   http:
-    port: "8081"
+    port: "8083"
   grpc:
-    port: "9091"
+    port: "9093"
