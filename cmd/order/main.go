@@ -292,6 +292,9 @@ func main() {
 		// Order repository
 		fx.Provide(fx.Annotate(orderRepository.NewGormOrderRepository, fx.As(new(orderRepository.OrderRepository)))),
 
+		// Outbox repository
+		fx.Provide(fx.Annotate(orderRepository.NewGormOutboxRepository, fx.As(new(orderRepository.OutboxRepository)))),
+
 		// Order service
 		fx.Provide(fx.Annotate(orderService.NewDBOrderService, fx.As(new(orderService.OrderService)))),
 

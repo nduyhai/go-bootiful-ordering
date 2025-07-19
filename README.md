@@ -163,6 +163,25 @@ The project includes a Docker Compose configuration for setting up the required 
    docker-compose down -v
    ```
 
+### Debezium Connectors
+
+The project includes Debezium for Change Data Capture (CDC) to stream database changes to Kafka. This enables event-driven architectures and data integration between services.
+
+#### Creating Connectors
+
+After starting the Docker Compose environment, you can create and register the Debezium connectors using the provided Makefile target:
+
+```bash
+make create-connectors
+```
+
+This command will:
+1. Wait for the Debezium Connect service to be ready
+2. Copy the connector configuration to the Debezium container
+3. Register the connector with the Debezium Connect API
+
+The connector configuration is defined in `config/connectors/debezium-connector-config.json` and is set up to monitor the `order_outbox` table for changes, implementing the Outbox Pattern for reliable event publishing.
+
 ## Running the Application
 
 ```

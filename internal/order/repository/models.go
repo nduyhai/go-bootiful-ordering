@@ -85,5 +85,5 @@ func FromOrderDomain(order *domain.Order) *OrderModel {
 
 // AutoMigrate creates or updates the database schema for order models
 func AutoMigrate(db *gorm.DB) error {
-	return db.AutoMigrate(&OrderModel{}, &OrderItemModel{})
+	return db.AutoMigrate(&OrderModel{}, &OrderItemModel{}, &OutboxModel{})
 }

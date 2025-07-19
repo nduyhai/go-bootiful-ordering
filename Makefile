@@ -6,7 +6,7 @@ GO := go
 # Go build flags
 BUILD_FLAGS := -ldflags "-s -w"
 
-.PHONY: all build run-% test fmt lint clean generate docker-rebuild docker-recreate
+.PHONY: all build run-% test fmt lint clean generate docker-rebuild docker-recreate create-connectors
 
 ## Default target: build all binaries
 all: build
@@ -65,3 +65,19 @@ docker-recreate:
 	@echo ">> Recreating Docker Compose environment..."
 	docker-compose down
 	docker-compose up -d --force-recreate
+
+## Create and register Debezium connectors
+create-connectors:
+	@echo ">> Creating Debezium connectors..."
+	@echo ">> Waiting for Debezium Connect to be ready..."
+	@until docker-compose exec -T debezium curl -s http://localhost:8083/ > /dev/null; do \
+		echo "Waiting for Debezium Connect..."; \
+		sleep 5; \
+	done
+	@echo ">> Debezium Connect is ready."
+	@echo ">> Copying connector configuration to Debezium container..."
+	@docker cp config/connectors/debezium-connector-config.json go-bootiful-ordering-debezium:/app/debezium-connector-config.json
+	@echo ">> Registering connector..."
+	@docker-compose exec -T debezium curl -i -X POST -H "Accept:application/json" -H "Content-Type:application/json" \
+		http://localhost:8083/connectors/ -d @/app/debezium-connector-config.json
+	@echo ">> Connector registration completed."

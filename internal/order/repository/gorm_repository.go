@@ -21,8 +21,14 @@ func NewGormOrderRepository(db *gorm.DB) *GormOrderRepository {
 	}
 }
 
-// CreateOrder persists a new order and returns the created order
-func (r *GormOrderRepository) CreateOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+// BeginTransaction starts a new transaction
+func (r *GormOrderRepository) BeginTransaction(ctx context.Context) (*gorm.DB, error) {
+	tx := r.db.WithContext(ctx).Begin()
+	return tx, tx.Error
+}
+
+// prepareOrder prepares an order for creation
+func prepareOrder(order *domain.Order) {
 	// Generate a new UUID if not provided
 	if order.ID == "" {
 		order.ID = uuid.New().String()
@@ -44,18 +50,36 @@ func (r *GormOrderRepository) CreateOrder(ctx context.Context, order *domain.Ord
 	if order.Status == domain.OrderStatusUnspecified {
 		order.Status = domain.OrderStatusPending
 	}
+}
+
+// CreateOrderWithTx persists a new order within an existing transaction and returns the created order
+func (r *GormOrderRepository) CreateOrderWithTx(ctx context.Context, tx *gorm.DB, order *domain.Order) (*domain.Order, error) {
+	// Prepare the order
+	prepareOrder(order)
 
 	// Convert domain model to database model
 	orderModel := FromOrderDomain(order)
 
-	// Begin transaction
-	tx := r.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
 	// Create order
 	if err := tx.Create(orderModel).Error; err != nil {
+		return nil, err
+	}
+
+	// Return the created order
+	return orderModel.ToOrderDomain(), nil
+}
+
+// CreateOrder persists a new order and returns the created order
+func (r *GormOrderRepository) CreateOrder(ctx context.Context, order *domain.Order) (*domain.Order, error) {
+	// Begin transaction
+	tx, err := r.BeginTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create order within transaction
+	createdOrder, err := r.CreateOrderWithTx(ctx, tx, order)
+	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
@@ -66,7 +90,7 @@ func (r *GormOrderRepository) CreateOrder(ctx context.Context, order *domain.Ord
 	}
 
 	// Return the created order
-	return orderModel.ToOrderDomain(), nil
+	return createdOrder, nil
 }
 
 // GetOrder retrieves an order by ID
@@ -123,33 +147,48 @@ func (r *GormOrderRepository) ListOrders(ctx context.Context, customerID string,
 	return orders, nextPageToken, nil
 }
 
-// UpdateOrderStatus updates the status of an order
-func (r *GormOrderRepository) UpdateOrderStatus(ctx context.Context, orderID string, status domain.OrderStatus) (*domain.Order, error) {
-	// Begin transaction
-	tx := r.db.WithContext(ctx).Begin()
-	if tx.Error != nil {
-		return nil, tx.Error
-	}
-
+// UpdateOrderStatusWithTx updates the status of an order within an existing transaction
+func (r *GormOrderRepository) UpdateOrderStatusWithTx(ctx context.Context, tx *gorm.DB, orderID string, status domain.OrderStatus) (*domain.Order, error) {
 	// Update order status
 	if err := tx.Model(&OrderModel{}).Where("id = ?", orderID).Updates(map[string]interface{}{
 		"status":     int(status),
 		"updated_at": time.Now(),
 	}).Error; err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	// Check if order exists
 	var count int64
 	if err := tx.Model(&OrderModel{}).Where("id = ?", orderID).Count(&count).Error; err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if count == 0 {
-		tx.Rollback()
 		return nil, errors.New("order not found")
+	}
+
+	// Get order with items
+	var orderModel OrderModel
+	if err := tx.Preload("Items").First(&orderModel, "id = ?", orderID).Error; err != nil {
+		return nil, err
+	}
+
+	return orderModel.ToOrderDomain(), nil
+}
+
+// UpdateOrderStatus updates the status of an order
+func (r *GormOrderRepository) UpdateOrderStatus(ctx context.Context, orderID string, status domain.OrderStatus) (*domain.Order, error) {
+	// Begin transaction
+	tx, err := r.BeginTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Update order status within transaction
+	updatedOrder, err := r.UpdateOrderStatusWithTx(ctx, tx, orderID, status)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
 	}
 
 	// Commit transaction
@@ -157,6 +196,5 @@ func (r *GormOrderRepository) UpdateOrderStatus(ctx context.Context, orderID str
 		return nil, err
 	}
 
-	// Get updated order
-	return r.GetOrder(ctx, orderID)
+	return updatedOrder, nil
 }

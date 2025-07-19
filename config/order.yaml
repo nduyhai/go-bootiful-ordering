@@ -31,6 +31,6 @@ pyroscope:
 # Server configuration
 server:
   http:
-    port: "8082"
+    port: "8084"
   grpc:
-    port: "9092"
+    port: "9094"
